@@ -4,5 +4,6 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Config(
-    val accounts: List<Account>
+    val accounts: List<Account> = emptyList(),
+    val activatedId: String? = null
 )

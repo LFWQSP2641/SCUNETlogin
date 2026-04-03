@@ -8,7 +8,7 @@ import java.io.InputStream
 import java.io.OutputStream
 
 object ConfigSerializer : androidx.datastore.core.Serializer<Config> {
-    override val defaultValue: Config = Config(accounts = emptyList())
+    override val defaultValue: Config = Config()
 
     override suspend fun readFrom(input: InputStream): Config = withContext(Dispatchers.IO) {
         try {
@@ -16,7 +16,7 @@ object ConfigSerializer : androidx.datastore.core.Serializer<Config> {
                 deserializer = Config.serializer(),
                 string = input.readBytes().decodeToString()
             )
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             defaultValue
         }
     }

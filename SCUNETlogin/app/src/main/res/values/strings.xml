@@ -10,4 +10,18 @@
     <string name="china_telecom">ChinaTelecom</string>
     <string name="china_mobile">ChinaMobile</string>
     <string name="china_unicom">ChinaUnicom</string>
+    <string name="account">Account</string>
+    <string name="no_account">No accounts, click the plus button to add</string>
+    <string name="configuration">Configuration</string>
+    <string name="toggle_account">Switch</string>
+    <string name="student_id_label">Student ID:</string>
+    <string name="service_label">Service:</string>
+    <string name="login">Login</string>
+    <string name="edit">Edit</string>
+    <string name="delete">Delete</string>
+    <string name="new_account">New Account</string>
+    <string name="edit_account">Edit Account</string>
+    <string name="back">Back</string>
+    <string name="name">Name</string>
+    <string name="save_configuration">Save Configuration</string>
 </resources>

@@ -11,4 +11,18 @@
     <string name="china_telecom">中国电信</string>
     <string name="china_mobile">中国移动</string>
     <string name="china_unicom">中国联通</string>
+    <string name="account">账号</string>
+    <string name="no_account">暂无账号，点击右上角添加</string>
+    <string name="configuration">配置</string>
+    <string name="toggle_account">切换</string>
+    <string name="student_id_label">学号:</string>
+    <string name="service_label">服务:</string>
+    <string name="login">登录</string>
+    <string name="edit">编辑</string>
+    <string name="delete">删除</string>
+    <string name="new_account">新建账号</string>
+    <string name="edit_account">编辑账号</string>
+    <string name="back">返回</string>
+    <string name="name">名称</string>
+    <string name="save_configuration">保存配置</string>
 </resources>
