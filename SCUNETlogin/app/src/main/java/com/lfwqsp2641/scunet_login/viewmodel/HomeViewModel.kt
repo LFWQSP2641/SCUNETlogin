@@ -3,11 +3,18 @@ package com.lfwqsp2641.scunet_login.viewmodel
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.lfwqsp2641.scunet_login.R
 import com.lfwqsp2641.scunet_login.data.dto.Config
 import com.lfwqsp2641.scunet_login.data.dto.Account
+import com.lfwqsp2641.scunet_login.data.model.TaskLog
 import com.lfwqsp2641.scunet_login.data.utils.configDataStore
+import com.lfwqsp2641.scunet_login.manager.TaskLogging
+import com.lfwqsp2641.scunet_login.service.LoginService
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -38,6 +45,9 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             initialValue = null
         )
 
+    private val _toastMessage = MutableSharedFlow<String>(replay = 0)
+    val toastMessage = _toastMessage.asSharedFlow()
+
     fun activateAccount(accountId: String) {
         viewModelScope.launch {
             dataStore.updateData { currentConfig ->
@@ -59,8 +69,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-
-    @Suppress("unused")
     fun deleteAccount(accountId: String) {
         viewModelScope.launch {
             dataStore.updateData { currentConfig ->
@@ -78,6 +86,44 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     activatedId = updatedActivatedId
                 )
             }
+        }
+    }
+
+    suspend fun startLogin() {
+        val data = dataStore.data.firstOrNull()
+        if (data == null || data.accounts.isEmpty()) {
+            TaskLogging.addLog("No account is activated", TaskLog.LogLevel.WARN)
+            _toastMessage.emit(getApplication<Application>().getString(R.string.no_account_activated))
+            return
+        }
+
+        val currentAccount = if (data.activatedId != null) {
+            data.accounts.firstOrNull { it.id == data.activatedId }
+        } else {
+            data.accounts.firstOrNull()
+        }
+
+        if (currentAccount == null) {
+            TaskLogging.addLog("No account is activated", TaskLog.LogLevel.WARN)
+            _toastMessage.emit(getApplication<Application>().getString(R.string.no_account_activated))
+            return
+        }
+
+        val loginService = LoginService()
+        try {
+            loginService.startLogin(currentAccount)
+            TaskLogging.addLog(
+                "Login successful for account: ${currentAccount.username}",
+                TaskLog.LogLevel.SUCCESS
+            )
+            _toastMessage.emit(getApplication<Application>().getString(R.string.login_success))
+        } catch (e: Exception) {
+            TaskLogging.addLog(
+                "Login failed for account: ${currentAccount.username}",
+                TaskLog.LogLevel.ERROR
+            )
+            TaskLogging.addLog("Error details: ${e.message}", TaskLog.LogLevel.ERROR)
+            _toastMessage.emit(getApplication<Application>().getString(R.string.login_failed))
         }
     }
 }

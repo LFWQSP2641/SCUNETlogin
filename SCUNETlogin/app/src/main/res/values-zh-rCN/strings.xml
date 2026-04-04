@@ -30,4 +30,11 @@
     <string name="error_service_required">请选择服务</string>
     <string name="error_username_required">学号不能为空</string>
     <string name="error_password_required">密码不能为空</string>
+    <string name="no_account_activated">暂无账号被激活，请先添加或选择账号</string>
+    <string name="login_success">登录成功</string>
+    <string name="login_failed">登录失败</string>
+    <string name="edit_action">编辑</string>
+    <string name="more_action">更多</string>
+    <string name="app_logo">应用图标</string>
+    <string name="add_account">添加</string>
 </resources>

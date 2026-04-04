@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -26,7 +27,10 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -66,159 +70,177 @@ fun HomeScreen(
     val showAccountListSheet = remember { mutableStateOf(false) }
     val accountListSheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val subtleDeeperContainerColor = lerp(
         MaterialTheme.colorScheme.secondaryContainer,
         Color.Black,
         0.08f
     )
 
-    Column(modifier = modifier) {
-        Surface(
-            modifier = Modifier.padding(16.dp),
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(
+    // Collect toast messages and show them as snackbars
+    LaunchedEffect(Unit) {
+        viewModel.toastMessage.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    Box(modifier = modifier) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Surface(
                 modifier = Modifier.padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_description),
-                        contentDescription = "App Logo",
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                    )
-                    Text(
-                        text = "账号",
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    FilledIconButton(
-                        onClick = {
-                            navController.navigate(Routes.AccountEditor(id = null))
-                        },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = IconButtonDefaults.filledIconButtonColors(
-                            containerColor = subtleDeeperContainerColor,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-                        )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_add),
-                            contentDescription = "Add"
+                            painter = painterResource(R.drawable.ic_description),
+                            contentDescription = stringResource(R.string.account),
+                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
-                    }
-                }
-                if (activatedAccount == null) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
                         Text(
-                            "暂无账号，点击右上角添加",
-                            color = MaterialTheme.colorScheme.onSecondaryContainer
+                            text = stringResource(R.string.account),
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            fontWeight = FontWeight.Bold,
                         )
-                    }
-                } else {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Surface(
-                            color = subtleDeeperContainerColor,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            shape = RoundedCornerShape(16.dp),
-                            onClick = { showAccountListSheet.value = true },
-                            modifier = Modifier.fillMaxWidth()
+                        Spacer(modifier = Modifier.weight(1f))
+                        FilledIconButton(
+                            onClick = {
+                                navController.navigate(Routes.AccountEditor(id = null))
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = IconButtonDefaults.filledIconButtonColors(
+                                containerColor = subtleDeeperContainerColor,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         ) {
-                            Row(
-                                modifier = Modifier.padding(16.dp),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_draft),
-                                    contentDescription = stringResource(R.string.configuration)
-                                )
-                                Text(
-                                    text = activatedAccount.remark
-                                )
-                                Spacer(modifier = Modifier.weight(1f))
-                                Icon(
-                                    painter = painterResource(R.drawable.ic_unfold_more),
-                                    contentDescription = stringResource(R.string.toggle_account)
-                                )
-                            }
+                            Icon(
+                                painter = painterResource(R.drawable.ic_add),
+                                contentDescription = stringResource(R.string.add_account)
+                            )
                         }
-                        Surface(
-                            color = subtleDeeperContainerColor,
-                            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                            shape = RoundedCornerShape(16.dp),
-                            modifier = Modifier.fillMaxWidth()
+                    }
+                    if (activatedAccount == null) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            Text(
+                                stringResource(R.string.no_account),
+                                color = MaterialTheme.colorScheme.onSecondaryContainer
+                            )
+                        }
+                    } else {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                color = subtleDeeperContainerColor,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                shape = RoundedCornerShape(16.dp),
+                                onClick = { showAccountListSheet.value = true },
+                                modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier = Modifier.padding(16.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.student_id_label),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
-                                            alpha = 0.7f
-                                        )
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_draft),
+                                        contentDescription = stringResource(R.string.configuration)
                                     )
                                     Text(
-                                        text = activatedAccount.username,
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
+                                        text = activatedAccount.remark
+                                    )
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Icon(
+                                        painter = painterResource(R.drawable.ic_unfold_more),
+                                        contentDescription = stringResource(R.string.toggle_account)
                                     )
                                 }
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically
+                            }
+                            Surface(
+                                color = subtleDeeperContainerColor,
+                                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                                shape = RoundedCornerShape(16.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Text(
-                                        text = stringResource(R.string.service_label),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
-                                            alpha = 0.7f
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.student_id_label),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                                alpha = 0.7f
+                                            )
                                         )
-                                    )
-                                    Text(
-                                        text = stringResource(selectedOptionText.label),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                        Text(
+                                            text = activatedAccount.username,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.service_label),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(
+                                                alpha = 0.7f
+                                            )
+                                        )
+                                        Text(
+                                            text = stringResource(selectedOptionText.label),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            Spacer(modifier = Modifier.weight(1f))
+            OutlinedButton(
+                onClick = {
+                    scope.launch {
+                        viewModel.startLogin()
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Text(stringResource(R.string.login))
+            }
         }
-        Spacer(modifier = Modifier.weight(1f))
-        OutlinedButton(
-            onClick = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Text(stringResource(R.string.login))
-        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
     if (showAccountListSheet.value) {
@@ -233,7 +255,7 @@ fun HomeScreen(
                     .padding(bottom = 16.dp),
             ) {
                 Text(
-                    text = "账号",
+                    text = stringResource(R.string.account),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(
@@ -270,7 +292,7 @@ fun HomeScreen(
                             ) {
                                 Icon(
                                     painter = painterResource(R.drawable.ic_draft),
-                                    contentDescription = "配置"
+                                    contentDescription = stringResource(R.string.configuration)
                                 )
                                 Column {
                                     Text(
@@ -292,7 +314,7 @@ fun HomeScreen(
                                     ) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_more_vert),
-                                            contentDescription = "More"
+                                            contentDescription = stringResource(R.string.more_action)
                                         )
                                     }
                                     DropdownMenu(
@@ -300,7 +322,7 @@ fun HomeScreen(
                                         onDismissRequest = { menuExpanded.value = false }
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("编辑") },
+                                            text = { Text(stringResource(R.string.edit_action)) },
                                             onClick = {
                                                 menuExpanded.value = false
                                                 showAccountListSheet.value = false

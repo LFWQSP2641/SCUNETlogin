@@ -29,4 +29,11 @@
     <string name="error_service_required">Please select a service</string>
     <string name="error_username_required">Student ID cannot be empty</string>
     <string name="error_password_required">Password cannot be empty</string>
+    <string name="no_account_activated">No account activated, please add or select an account</string>
+    <string name="login_success">Login successful</string>
+    <string name="login_failed">Login failed</string>
+    <string name="edit_action">Edit</string>
+    <string name="more_action">More</string>
+    <string name="app_logo">App Logo</string>
+    <string name="add_account">Add</string>
 </resources>
