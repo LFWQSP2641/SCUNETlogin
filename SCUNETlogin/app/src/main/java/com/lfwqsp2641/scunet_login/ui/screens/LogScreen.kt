@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -19,9 +20,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -35,17 +36,36 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lfwqsp2641.scunet_login.R
 import com.lfwqsp2641.scunet_login.data.model.TaskLog
 import com.lfwqsp2641.scunet_login.viewmodel.LogViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LogScreen(modifier: Modifier = Modifier, viewModel: LogViewModel = viewModel()) {
     val logs by viewModel.uiState.collectAsState()
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
+
     Scaffold(
         modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.log)) },
                 actions = {
+                    IconButton(
+                        onClick = {
+                            if (logs.isNotEmpty()) {
+                                coroutineScope.launch {
+                                    listState.animateScrollToItem(logs.lastIndex)
+                                }
+                            }
+                        }
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_vertical_align_bottom),
+                            contentDescription = stringResource(R.string.scroll_to_bottom)
+                        )
+                    }
+
                     IconButton(
                         onClick = { viewModel.clearLogs() }
                     ) {
@@ -59,22 +79,17 @@ fun LogScreen(modifier: Modifier = Modifier, viewModel: LogViewModel = viewModel
         }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            LogContent(logs = logs)
+            LogContent(logs = logs, listState = listState)
         }
     }
 }
 
 @Composable
-private fun LogContent(logs: List<TaskLog>) {
-    val listState = rememberLazyListState()
-
-    LaunchedEffect(logs.isNotEmpty()) {
-        if (logs.isNotEmpty()) {
-            listState.scrollToItem(logs.size - 1)
-        }
-    }
-
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
+private fun LogContent(logs: List<TaskLog>, listState: LazyListState) {
+    LazyColumn(
+        state = listState,
+        modifier = Modifier.fillMaxSize()
+    ) {
         itemsIndexed(logs) { index, log ->
             val backgroundColor = if (index % 2 == 0) {
                 Color.Transparent
