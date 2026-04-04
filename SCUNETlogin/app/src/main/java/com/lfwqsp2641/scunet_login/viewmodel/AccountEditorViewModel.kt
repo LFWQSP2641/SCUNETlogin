@@ -1,8 +1,10 @@
 package com.lfwqsp2641.scunet_login.viewmodel
 
 import android.app.Application
+import androidx.annotation.StringRes
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.lfwqsp2641.scunet_login.R
 import com.lfwqsp2641.scunet_login.data.dto.Account
 import com.lfwqsp2641.scunet_login.data.enums.ServiceType
 import com.lfwqsp2641.scunet_login.data.utils.configDataStore
@@ -36,10 +38,10 @@ class AccountEditorViewModel(application: Application) : AndroidViewModel(applic
 
     private fun computeErrors(account: Account): AccountFieldErrors {
         return AccountFieldErrors(
-            remarkError = if (account.remark.isBlank()) "备注不能为空" else null,
-            serviceError = if (account.service.isBlank()) "请选择服务" else null,
-            usernameError = if (account.username.isBlank()) "用户名不能为空" else null,
-            passwordError = if (account.password.isBlank()) "密码不能为空" else null
+            remarkError = if (account.remark.isBlank()) R.string.error_remark_required else null,
+            serviceError = if (account.service.isBlank()) R.string.error_service_required else null,
+            usernameError = if (account.username.isBlank()) R.string.error_username_required else null,
+            passwordError = if (account.password.isBlank()) R.string.error_password_required else null
         )
     }
 
@@ -97,10 +99,10 @@ enum class AccountField {
 }
 
 data class AccountFieldErrors(
-    val remarkError: String? = null,
-    val serviceError: String? = null,
-    val usernameError: String? = null,
-    val passwordError: String? = null,
+    @field:StringRes val remarkError: Int? = null,
+    @field:StringRes val serviceError: Int? = null,
+    @field:StringRes val usernameError: Int? = null,
+    @field:StringRes val passwordError: Int? = null,
 ) {
     val hasErrors: Boolean
         get() = remarkError != null || serviceError != null || usernameError != null || passwordError != null

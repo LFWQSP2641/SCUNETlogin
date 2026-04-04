@@ -1,10 +1,12 @@
 package com.lfwqsp2641.scunet_login.ui.model
 
+import androidx.annotation.StringRes
 import com.lfwqsp2641.scunet_login.R
 import com.lfwqsp2641.scunet_login.data.enums.ServiceType
 
 enum class ServiceDisplay(
-    val serviceType: ServiceType, val label: Int
+    val serviceType: ServiceType,
+    @field:StringRes val label: Int
 ) {
     EduNet(ServiceType.EduNet, R.string.edunet), ChinaTelecom(
         ServiceType.ChinaTelecom,

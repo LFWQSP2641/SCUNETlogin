@@ -91,8 +91,8 @@ fun AccountEditorScreen(
                     value = account.remark,
                     isError = fieldErrors.remarkError != null,
                     supportingText = {
-                        if (fieldErrors.remarkError != null) {
-                            Text(fieldErrors.remarkError ?: "")
+                        fieldErrors.remarkError?.let {
+                            Text(stringResource(it))
                         }
                     },
                     onValueChange = {
@@ -109,8 +109,8 @@ fun AccountEditorScreen(
                     value = account.username,
                     isError = fieldErrors.usernameError != null,
                     supportingText = {
-                        if (fieldErrors.usernameError != null) {
-                            Text(fieldErrors.usernameError ?: "")
+                        fieldErrors.usernameError?.let {
+                            Text(stringResource(it))
                         }
                     },
                     onValueChange = {
@@ -127,8 +127,8 @@ fun AccountEditorScreen(
                     value = account.password,
                     isError = fieldErrors.passwordError != null,
                     supportingText = {
-                        if (fieldErrors.passwordError != null) {
-                            Text(fieldErrors.passwordError ?: "")
+                        fieldErrors.passwordError?.let {
+                            Text(stringResource(it))
                         }
                     },
                     onValueChange = {
@@ -154,8 +154,8 @@ fun AccountEditorScreen(
                         value = stringResource(selectedOptionText.label),
                         isError = fieldErrors.serviceError != null,
                         supportingText = {
-                            if (fieldErrors.serviceError != null) {
-                                Text(fieldErrors.serviceError ?: "")
+                            fieldErrors.serviceError?.let {
+                                Text(stringResource(it))
                             }
                         },
                         onValueChange = { },

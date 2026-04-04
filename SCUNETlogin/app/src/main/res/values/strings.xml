@@ -25,4 +25,8 @@
     <string name="name">Name</string>
     <string name="save_configuration">Save Configuration</string>
     <string name="clear">clear</string>
+    <string name="error_remark_required">Name cannot be empty</string>
+    <string name="error_service_required">Please select a service</string>
+    <string name="error_username_required">Student ID cannot be empty</string>
+    <string name="error_password_required">Password cannot be empty</string>
 </resources>

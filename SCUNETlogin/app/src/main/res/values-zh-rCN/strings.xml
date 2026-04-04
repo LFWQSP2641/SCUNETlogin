@@ -26,4 +26,8 @@
     <string name="name">名称</string>
     <string name="save_configuration">保存配置</string>
     <string name="clear">清空</string>
+    <string name="error_remark_required">名称不能为空</string>
+    <string name="error_service_required">请选择服务</string>
+    <string name="error_username_required">学号不能为空</string>
+    <string name="error_password_required">密码不能为空</string>
 </resources>
