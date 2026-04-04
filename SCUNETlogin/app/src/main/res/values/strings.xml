@@ -24,4 +24,5 @@
     <string name="back">Back</string>
     <string name="name">Name</string>
     <string name="save_configuration">Save Configuration</string>
+    <string name="clear">clear</string>
 </resources>

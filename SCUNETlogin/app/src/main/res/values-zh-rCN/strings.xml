@@ -25,4 +25,5 @@
     <string name="back">返回</string>
     <string name="name">名称</string>
     <string name="save_configuration">保存配置</string>
+    <string name="clear">清空</string>
 </resources>
