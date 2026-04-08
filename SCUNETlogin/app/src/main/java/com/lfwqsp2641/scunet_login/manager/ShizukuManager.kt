@@ -71,4 +71,30 @@ object ShizukuManager {
             "IPC Error: ${e.message}"
         }
     }
+
+    fun connectToOpenWifi(ssid: String): Boolean {
+        return try {
+            userService?.connectToOpenWifi(ssid) ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to connect to open WiFi via Shizuku", e)
+            false
+        }
+    }
+
+    fun disconnectWifi(): Boolean {
+        return try {
+            userService?.disconnectWifi() ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to disconnect WiFi via Shizuku", e)
+            false
+        }
+    }
+
+    fun grantPermission(packageName: String, permission: String) {
+        try {
+            userService?.grantPermission(packageName, permission)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to grant permission via Shizuku", e)
+        }
+    }
 }
