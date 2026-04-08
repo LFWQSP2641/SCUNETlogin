@@ -55,6 +55,9 @@ object ShizukuManager {
     }
 
     fun unbind() {
+        if (!::userServiceArgs.isInitialized) {
+            return
+        }
         try {
             userService?.destroy()
         } catch (e: Exception) {

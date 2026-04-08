@@ -31,6 +31,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.SocketFactory
 import kotlin.coroutines.resume
 
@@ -145,12 +146,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     ShizukuManager.connectToOpenWifi("SCUNET")
                     // Delay, wait for network connection
                     kotlinx.coroutines.delay(1000)
-                    for (i in 1..5) {
+                    for (attempt in 1..5) {
                         val ssid = ShizukuManager.getSsid()
                         if (ssid == "SCUNET") {
                             break
                         }
-                        kotlinx.coroutines.delay(500)
+                        if (attempt < 5) {
+                            kotlinx.coroutines.delay(500)
+                        }
                     }
                     val ssid = ShizukuManager.getSsid()
                     TaskLogging.addLog("Current SSID: $ssid", TaskLog.LogLevel.INFO)
@@ -219,15 +222,29 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
         return withTimeoutOrNull(timeoutMillis) {
             suspendCancellableCoroutine { continuation ->
+                val completed = AtomicBoolean(false)
+
+                fun completeOnce(
+                    result: SocketFactory?,
+                    callback: ConnectivityManager.NetworkCallback
+                ) {
+                    if (completed.compareAndSet(false, true)) {
+                        runCatching {
+                            if (continuation.isActive) {
+                                continuation.resume(result)
+                            }
+                        }
+                    }
+                    runCatching { connectivityManager.unregisterNetworkCallback(callback) }
+                }
+
                 val callback = object : ConnectivityManager.NetworkCallback() {
                     override fun onAvailable(network: Network) {
-                        continuation.resume(network.socketFactory)
-                        runCatching { connectivityManager.unregisterNetworkCallback(this) }
+                        completeOnce(network.socketFactory, this)
                     }
 
                     override fun onUnavailable() {
-                        continuation.resume(null)
-                        runCatching { connectivityManager.unregisterNetworkCallback(this) }
+                        completeOnce(null, this)
                     }
                 }
 
@@ -238,8 +255,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 try {
                     connectivityManager.requestNetwork(wifiRequest, callback)
                 } catch (_: Exception) {
-                    continuation.resume(null)
-                    runCatching { connectivityManager.unregisterNetworkCallback(callback) }
+                    completeOnce(null, callback)
                 }
             }
         }
