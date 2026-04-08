@@ -3,7 +3,7 @@ package com.lfwqsp2641.scunet_login.service
 import com.lfwqsp2641.scunet_login.data.dto.Account
 import com.lfwqsp2641.scunet_login.helper.LegacyCampusRsaEncryptor
 import io.ktor.client.HttpClient
-import io.ktor.client.engine.cio.CIO
+import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.HttpRequestBuilder
 import io.ktor.client.request.forms.FormDataContent
@@ -19,6 +19,7 @@ import io.ktor.http.parseQueryString
 import kotlinx.coroutines.delay
 import java.io.IOException
 import java.net.URL
+import javax.net.SocketFactory
 
 object LoginConstants {
     const val mainUrl = "http://192.168.2.135/"
@@ -68,10 +69,17 @@ sealed class LoginException(message: String, cause: Throwable? = null) : Excepti
         LoginException("Login failed: $responseSnippet")
 }
 
-class LoginService {
-    private val client = createClient()
+class LoginService(
+    customSocketFactory: SocketFactory? = null,
+) {
+    private val client = createClient(customSocketFactory)
 
-    private fun createClient() = HttpClient(CIO) {
+    private fun createClient(socketFactory: SocketFactory?) = HttpClient(OkHttp) {
+        engine {
+            config {
+                socketFactory?.let { socketFactory(it) }
+            }
+        }
         followRedirects = false
         install(HttpTimeout) {
             requestTimeoutMillis = 10000
