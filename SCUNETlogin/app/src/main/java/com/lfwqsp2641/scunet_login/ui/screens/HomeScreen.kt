@@ -1,5 +1,6 @@
 package com.lfwqsp2641.scunet_login.ui.screens
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +69,8 @@ fun HomeScreen(
     val accountListSheetState = rememberModalBottomSheetState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val currentSsid by viewModel.currentSsid.collectAsState()
+
     // Collect toast messages and show them as snackbars
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
@@ -83,6 +86,12 @@ fun HomeScreen(
                 onSelectAccount = { showAccountListSheet.value = true }
             )
             Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = "当前网络: ${currentSsid ?: "获取中/未连接"}",
+                modifier = Modifier.padding(16.dp).clickable(
+                    onClick = { viewModel.fetchSsid() }
+                )
+            )
             HomeLoginButton(viewModel = viewModel)
         }
         SnackbarHost(

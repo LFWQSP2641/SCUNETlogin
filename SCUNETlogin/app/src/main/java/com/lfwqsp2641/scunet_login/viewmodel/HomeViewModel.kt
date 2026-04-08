@@ -8,12 +8,16 @@ import com.lfwqsp2641.scunet_login.data.dto.Config
 import com.lfwqsp2641.scunet_login.data.dto.Account
 import com.lfwqsp2641.scunet_login.data.model.TaskLog
 import com.lfwqsp2641.scunet_login.data.utils.configDataStore
+import com.lfwqsp2641.scunet_login.manager.ShizukuManager
 import com.lfwqsp2641.scunet_login.manager.TaskLogging
 import com.lfwqsp2641.scunet_login.service.LoginService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -21,6 +25,9 @@ import kotlinx.coroutines.launch
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStore = application.configDataStore
+
+    private val _currentSsid = MutableStateFlow<String?>(null)
+    val currentSsid: StateFlow<String?> = _currentSsid.asStateFlow()
 
     private val configState: StateFlow<Config> = dataStore.data
         .stateIn(
@@ -47,6 +54,12 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _toastMessage = MutableSharedFlow<String>(replay = 0)
     val toastMessage = _toastMessage.asSharedFlow()
+
+
+    init {
+        fetchSsid()
+    }
+
 
     fun activateAccount(accountId: String) {
         viewModelScope.launch {
@@ -124,6 +137,19 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
             )
             TaskLogging.addLog("Error details: ${e.message}", TaskLog.LogLevel.ERROR)
             _toastMessage.emit(getApplication<Application>().getString(R.string.login_failed))
+        }
+    }
+
+    fun fetchSsid() {
+        viewModelScope.launch(Dispatchers.IO) {
+            repeat(5) {
+                val ssid = ShizukuManager.getSsid()
+                _currentSsid.value = ssid
+                if (ssid != null) {
+                    return@launch
+                }
+                kotlinx.coroutines.delay(1000)
+            }
         }
     }
 }
