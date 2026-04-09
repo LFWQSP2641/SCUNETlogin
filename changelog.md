@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.1.0 - 2026-05-10
+## 1.1.1 - 2026-04-09
+
+- In release (R8 enabled), keep Shizuku cross-process classes
+
+## 1.1.0 - 2026-04-08
 
 - Add shizuku for Wi-Fi connection and permission management
 - Fix some bugs and improve performance
