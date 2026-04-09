@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.2 - 2026-04-09
+
+- Fix minor bugs and improve stability
+
 ## 1.1.1 - 2026-04-09
 
 - In release (R8 enabled), keep Shizuku cross-process classes
