@@ -14,6 +14,7 @@ class ShizukuUserService : IUserService.Stub() {
         HiddenApiBypass.addHiddenApiExemptions(
             "Landroid/os/ServiceManager;",
             "Landroid/net/wifi/IWifiManager;",
+            "Landroid/net/wifi/WifiConfiguration;",
             "Landroid/permission/IPermissionManager;"
         )
     }
@@ -63,15 +64,39 @@ class ShizukuUserService : IUserService.Stub() {
         }
     }
 
+    private fun setAllowAutojoinIfPresent(config: WifiConfiguration) {
+        try {
+            val field = WifiConfiguration::class.java.getDeclaredField("allowAutojoin")
+            field.isAccessible = true
+
+            when (field.type) {
+                Boolean::class.javaPrimitiveType -> {
+                    field.setBoolean(config, false)
+                }
+
+                Boolean::class.java -> {
+                    field.set(config, false)
+                }
+
+                else -> {
+                    field.set(config, false)
+                }
+            }
+        } catch (_: Throwable) {
+            // allowAutojoin is hidden/absent on older APIs and ROMs; ignore and continue.
+        }
+    }
+
     override fun getCurrentNetworkSsid(): String {
         return try {
             val service = wifiService ?: return "Unknown (wifiService is null)"
-            
+
             // In API 29+, getConnectionInfo() requires `String callingPackage` 
             // In API 30+, it optionally requires `String callingFeatureId` too
-            val getConnectionInfoMethod = service.javaClass.methods.firstOrNull { it.name == "getConnectionInfo" } 
-                ?: return "Unknown (getConnectionInfo not found)"
-                
+            val getConnectionInfoMethod =
+                service.javaClass.methods.firstOrNull { it.name == "getConnectionInfo" }
+                    ?: return "Unknown (getConnectionInfo not found)"
+
             val args = getConnectionInfoMethod.parameterTypes.map { type ->
                 when (type) {
                     String::class.java -> "com.android.shell" // Emulate shell's calling package
@@ -81,8 +106,9 @@ class ShizukuUserService : IUserService.Stub() {
             }.toTypedArray<Any?>()
 
             val connectionInfo = getConnectionInfoMethod.invoke(service, *args)
-            val ssid = connectionInfo?.javaClass?.getMethod("getSSID")?.invoke(connectionInfo) as? String
-            
+            val ssid =
+                connectionInfo?.javaClass?.getMethod("getSSID")?.invoke(connectionInfo) as? String
+
             ssid?.replace("\"", "") ?: "Unknown (SSID is null)"
         } catch (e: Throwable) {
             "Unknown (Error: ${e.message})"
@@ -96,12 +122,13 @@ class ShizukuUserService : IUserService.Stub() {
             val service = wifiService ?: return false
             val connectMethod = service.javaClass.methods.firstOrNull {
                 it.name == "connect" &&
-                    it.parameterTypes.firstOrNull() == WifiConfiguration::class.java
+                        it.parameterTypes.firstOrNull() == WifiConfiguration::class.java
             } ?: return false
 
             val config = WifiConfiguration()
             config.SSID = String.format("\"%s\"", ssid)
             config.allowedKeyManagement.set(WifiConfiguration.KeyMgmt.NONE)
+            setAllowAutojoinIfPresent(config)
 
             val args = connectMethod.parameterTypes.mapIndexed { index, type ->
                 when {
@@ -124,7 +151,8 @@ class ShizukuUserService : IUserService.Stub() {
     override fun disconnectWifi(): Boolean {
         return try {
             val service = wifiService ?: return false
-            val disconnectMethod = service.javaClass.methods.firstOrNull { it.name == "disconnect" } ?: return false
+            val disconnectMethod =
+                service.javaClass.methods.firstOrNull { it.name == "disconnect" } ?: return false
 
             val args = disconnectMethod.parameterTypes.map { type ->
                 when (type) {
