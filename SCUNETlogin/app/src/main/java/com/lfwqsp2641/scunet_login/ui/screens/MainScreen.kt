@@ -87,7 +87,7 @@ fun MainShell(rootNavController: NavHostController) {
         ) {
             composable(AppDestinations.HOME.route) { HomeScreen(Modifier, rootNavController) }
             composable(AppDestinations.LOG.route) { LogScreen() }
-            composable(AppDestinations.PROFILE.route) { SettingsScreen() }
+            // composable(AppDestinations.PROFILE.route) { SettingsScreen() }
         }
     }
     }
@@ -100,5 +100,5 @@ enum class AppDestinations(
 ) {
     HOME("home", R.string.home, R.drawable.ic_home),
     LOG("log", R.string.log, R.drawable.ic_description),
-    PROFILE("settings", R.string.settings, R.drawable.ic_settings),
+    // PROFILE("settings", R.string.settings, R.drawable.ic_settings),
 }
