@@ -14,6 +14,7 @@ import rikka.shizuku.Shizuku
 object ShizukuManager {
     private const val TAG = "ShizukuManager"
     private var userService: IUserService? = null
+    private var isInitialized = false
     private val serviceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
             userService = IUserService.Stub.asInterface(service)
@@ -29,6 +30,9 @@ object ShizukuManager {
     private var isDebuggable: Boolean = false
 
     fun init(context: Context) {
+        if (isInitialized) {
+            return
+        }
         if (!hasShizukuPermission()) {
             Log.e(TAG, "Shizuku permission is not granted or Shizuku is not running")
             return
@@ -43,6 +47,7 @@ object ShizukuManager {
             version(1)
         }
         bind()
+        isInitialized = true
     }
 
     fun bind() {
@@ -55,7 +60,7 @@ object ShizukuManager {
     }
 
     fun unbind() {
-        if (!::userServiceArgs.isInitialized) {
+        if (!isInitialized) {
             return
         }
         try {
@@ -64,6 +69,7 @@ object ShizukuManager {
         }
         Shizuku.unbindUserService(userServiceArgs, serviceConnection, true)
         userService = null
+        isInitialized = false
     }
 
     fun getSsid(): String? {

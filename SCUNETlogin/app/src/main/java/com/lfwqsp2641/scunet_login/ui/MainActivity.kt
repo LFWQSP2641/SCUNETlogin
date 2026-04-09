@@ -24,10 +24,10 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
                 RootScreen()
             }
         }
-        if (!hasShizukuPermission()) {
-            requestShizukuPermission()
-        } else {
+        if (hasShizukuPermission()) {
             ShizukuManager.init(applicationContext)
+        } else if (Shizuku.pingBinder()) {
+            requestShizukuPermission()
         }
     }
 

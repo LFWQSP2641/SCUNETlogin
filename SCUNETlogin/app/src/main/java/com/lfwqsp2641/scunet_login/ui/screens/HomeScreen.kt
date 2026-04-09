@@ -94,9 +94,11 @@ fun HomeScreen(
             Spacer(modifier = Modifier.weight(1f))
             Text(
                 text = "当前网络: ${currentSsid ?: "获取中/未连接"}",
-                modifier = Modifier.padding(16.dp).clickable(
-                    onClick = { viewModel.fetchSsid() }
-                )
+                modifier = Modifier
+                    .padding(16.dp)
+                    .clickable(
+                        onClick = { viewModel.fetchSsid() }
+                    )
             )
             Row(
                 modifier = Modifier

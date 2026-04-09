@@ -275,7 +275,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun fetchShizukuStatus() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             repeat(5) {
                 val isEnabled = hasShizukuPermission()
                 _isShizukuEnabled.value = isEnabled
