@@ -77,6 +77,11 @@ fun HomeScreen(
     val isShizukuEnabled by viewModel.isShizukuEnabled.collectAsState()
     var autoManageNetworkChecked by rememberSaveable { mutableStateOf(isShizukuEnabled) }
 
+    // Update autoManageNetworkChecked when isShizukuEnabled changes
+    LaunchedEffect(isShizukuEnabled) {
+        autoManageNetworkChecked = isShizukuEnabled
+    }
+
     // Collect toast messages and show them as snackbars
     LaunchedEffect(Unit) {
         viewModel.toastMessage.collect { message ->
