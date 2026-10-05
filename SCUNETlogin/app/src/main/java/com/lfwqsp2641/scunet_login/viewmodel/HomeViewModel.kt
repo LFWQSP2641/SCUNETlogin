@@ -1,11 +1,15 @@
 package com.lfwqsp2641.scunet_login.viewmodel
 
+import android.Manifest
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.lfwqsp2641.scunet_login.R
@@ -15,6 +19,7 @@ import com.lfwqsp2641.scunet_login.data.model.TaskLog
 import com.lfwqsp2641.scunet_login.data.utils.configDataStore
 import com.lfwqsp2641.scunet_login.manager.ShizukuManager
 import com.lfwqsp2641.scunet_login.manager.TaskLogging
+import com.lfwqsp2641.scunet_login.service.LoginException
 import com.lfwqsp2641.scunet_login.service.LoginService
 import com.lfwqsp2641.scunet_login.utils.hasShizukuPermission
 import kotlinx.coroutines.CancellationException
@@ -34,6 +39,7 @@ import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.net.SocketFactory
 import kotlin.coroutines.resume
+import kotlin.time.Duration.Companion.milliseconds
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val dataStore = application.configDataStore
@@ -43,6 +49,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _isShizukuEnabled = MutableStateFlow(false)
     val isShizukuEnabled: StateFlow<Boolean> = _isShizukuEnabled.asStateFlow()
+
+    private val _isAccessLocalNetworkPermissionGrantedFlow = MutableStateFlow(false)
+    val isAccessLocalNetworkPermissionGrantedFlow = _isAccessLocalNetworkPermissionGrantedFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
 
     private val configState: StateFlow<Config> = dataStore.data
         .stateIn(
@@ -141,30 +151,36 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
             val autoManageNetwork = autoManageNetworkChecked && hasShizukuPermission()
 
+            var targetWifiNetwork: Network? = null
+            val appContext = getApplication<Application>()
+            val connectivityManager =
+                appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
             try {
                 if (autoManageNetwork) {
                     ShizukuManager.connectToOpenWifi("SCUNET")
                     // Delay, wait for network connection
-                    kotlinx.coroutines.delay(1000)
+                    kotlinx.coroutines.delay(1000.milliseconds)
                     for (attempt in 1..5) {
                         val ssid = ShizukuManager.getSsid()
                         if (ssid == "SCUNET") {
                             break
                         }
                         if (attempt < 5) {
-                            kotlinx.coroutines.delay(500)
+                            kotlinx.coroutines.delay(500.milliseconds)
                         }
                     }
                     val ssid = ShizukuManager.getSsid()
                     TaskLogging.addLog("Current SSID: $ssid", TaskLog.LogLevel.INFO)
+                    val network = tryGetWifiNetwork(connectivityManager)
+                    if (network != null) {
+                        targetWifiNetwork = network
+                    }
                     // update ui
                     _currentSsid.value = ssid
                 }
                 // Try setting socketFactory to wifi
-                val appContext = getApplication<Application>()
-                val connectivityManager =
-                    appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-                val customSocketFactory = tryGetWifiSocketFactory(connectivityManager)
+                val customSocketFactory = targetWifiNetwork?.socketFactory
 
                 if (customSocketFactory != null) {
                     TaskLogging.addLog("WiFi socketFactory acquired", TaskLog.LogLevel.INFO)
@@ -176,12 +192,23 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 }
 
                 val loginService = LoginService(customSocketFactory)
-                loginService.startLogin(currentAccount)
-                // success
+
+                try {
+                    loginService.startLogin(currentAccount)
+                } catch (_: LoginException.AlreadyLoggedIn) {
+                    // Ignored
+                }
+                TaskLogging.addLog("Try reportNetworkConnectivity", TaskLog.LogLevel.INFO)
+                val networkToReport = targetWifiNetwork ?: connectivityManager.activeNetwork
+                connectivityManager.reportNetworkConnectivity(networkToReport, true)
                 if (autoManageNetwork) {
-                    // disconnect wifi and connect again
-                    ShizukuManager.disconnectWifi()
-                    ShizukuManager.connectToOpenWifi("SCUNET")
+                    TaskLogging.addLog("Try shizuku wifiRevalidate", TaskLog.LogLevel.INFO)
+                    val wifiRevalidateResult = ShizukuManager.wifiRevalidate()
+                    if (!wifiRevalidateResult) {
+                        TaskLogging.addLog("wifiRevalidate failed, try reconnecting", TaskLog.LogLevel.WARN)
+                        ShizukuManager.disconnectWifi()
+                        ShizukuManager.connectToOpenWifi("SCUNET")
+                    }
                 }
                 TaskLogging.addLog(
                     "Login successful for account: ${currentAccount.username}",
@@ -207,56 +234,98 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 _toastMessage.emit(getApplication<Application>().getString(R.string.login_failed))
             }
             // delay, and update ui
-            kotlinx.coroutines.delay(1000)
+            kotlinx.coroutines.delay(1000.milliseconds)
             fetchSsid()
         }
     }
 
-    private suspend fun tryGetWifiSocketFactory(
+    private suspend fun tryGetWifiNetwork(
         connectivityManager: ConnectivityManager,
         timeoutMillis: Long = 3000L,
-    ): SocketFactory? {
+    ): Network? {
         val wifiRequest = NetworkRequest.Builder()
             .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+            .removeCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            .removeCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
             .build()
 
-        return withTimeoutOrNull(timeoutMillis) {
+        return withTimeoutOrNull(timeoutMillis.milliseconds) {
             suspendCancellableCoroutine { continuation ->
                 val completed = AtomicBoolean(false)
 
-                fun completeOnce(
-                    result: SocketFactory?,
-                    callback: ConnectivityManager.NetworkCallback
-                ) {
-                    if (completed.compareAndSet(false, true)) {
-                        runCatching {
+                val callback = object : ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: Network) {
+                        completeOnce(network)
+                    }
+
+                    override fun onUnavailable() {
+                        completeOnce(null)
+                    }
+
+                    private fun completeOnce(result: Network?) {
+                        if (completed.compareAndSet(false, true)) {
+                            runCatching { connectivityManager.unregisterNetworkCallback(this) }
                             if (continuation.isActive) {
                                 continuation.resume(result)
                             }
                         }
                     }
-                    runCatching { connectivityManager.unregisterNetworkCallback(callback) }
-                }
-
-                val callback = object : ConnectivityManager.NetworkCallback() {
-                    override fun onAvailable(network: Network) {
-                        completeOnce(network.socketFactory, this)
-                    }
-
-                    override fun onUnavailable() {
-                        completeOnce(null, this)
-                    }
                 }
 
                 continuation.invokeOnCancellation {
-                    runCatching { connectivityManager.unregisterNetworkCallback(callback) }
+                    if (completed.compareAndSet(false, true)) {
+                        runCatching { connectivityManager.unregisterNetworkCallback(callback) }
+                    }
                 }
 
                 try {
-                    connectivityManager.requestNetwork(wifiRequest, callback)
+                    connectivityManager.registerNetworkCallback(wifiRequest, callback)
                 } catch (_: Exception) {
-                    completeOnce(null, callback)
+                    if (completed.compareAndSet(false, true)) {
+                        if (continuation.isActive) {
+                            continuation.resume(null)
+                        }
+                    }
                 }
+            }
+        }
+    }
+
+    fun startLogout(autoManageNetworkChecked: Boolean) {
+        viewModelScope.launch {
+            val appContext = getApplication<Application>()
+            val connectivityManager =
+                appContext.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            val wifiNetwork = tryGetWifiNetwork(connectivityManager)
+            // Try setting socketFactory to wifi
+            val customSocketFactory = wifiNetwork?.socketFactory
+
+            if (customSocketFactory != null) {
+                TaskLogging.addLog("WiFi socketFactory acquired", TaskLog.LogLevel.INFO)
+            } else {
+                TaskLogging.addLog(
+                    "Failed to acquire WiFi socketFactory, fallback to default network",
+                    TaskLog.LogLevel.WARN
+                )
+            }
+
+            val loginService = LoginService(customSocketFactory)
+
+            try {
+                loginService.startLogout()
+                TaskLogging.addLog("Logout successful", TaskLog.LogLevel.SUCCESS)
+
+                val autoManageNetwork = autoManageNetworkChecked && hasShizukuPermission()
+
+                if (autoManageNetwork) {
+                    ShizukuManager.disconnectWifi()
+                    TaskLogging.addLog("Disconnected from SCUNET WiFi", TaskLog.LogLevel.INFO)
+                }
+
+                _toastMessage.emit(getApplication<Application>().getString(R.string.logout_success))
+            } catch (e: Exception) {
+                TaskLogging.addLog("Logout failed: ${e.message}", TaskLog.LogLevel.ERROR)
+                _toastMessage.emit(getApplication<Application>().getString(R.string.logout_failed))
             }
         }
     }
@@ -269,7 +338,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 if (ssid != null) {
                     return@launch
                 }
-                kotlinx.coroutines.delay(1000)
+                kotlinx.coroutines.delay(1000.milliseconds)
             }
         }
     }
@@ -282,7 +351,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 if (isEnabled) {
                     return@launch
                 }
-                kotlinx.coroutines.delay(1000)
+                kotlinx.coroutines.delay(1000.milliseconds)
+            }
+        }
+    }
+
+    fun checkAccessLocalNetworkPermission() {
+        viewModelScope.launch {
+            val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+                ContextCompat.checkSelfPermission(
+                    getApplication(), Manifest.permission.ACCESS_LOCAL_NETWORK
+                ) == PackageManager.PERMISSION_GRANTED
+            } else true
+            _isAccessLocalNetworkPermissionGrantedFlow.value = granted
+        }
+    }
+
+    fun setAccessLocalNetworkPermissionGranted(isGranted: Boolean) {
+        _isAccessLocalNetworkPermissionGrantedFlow.value = isGranted
+    }
+
+    fun grantPermissionsByShizuku(permissions: List<String>) {
+        viewModelScope.launch {
+            if (!hasShizukuPermission()) {
+                return@launch
+            }
+            for (permission in permissions) {
+                ShizukuManager.grantPermission("com.lfwqsp2641.scunet_login", permission)
             }
         }
     }

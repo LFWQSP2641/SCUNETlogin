@@ -2,6 +2,8 @@ package com.lfwqsp2641.scunet_login.service
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.wifi.WifiConfiguration
 import android.os.IBinder
 import com.lfwqsp2641.scunet_login.IUserService
@@ -15,7 +17,10 @@ class ShizukuUserService : IUserService.Stub() {
             "Landroid/os/ServiceManager;",
             "Landroid/net/wifi/IWifiManager;",
             "Landroid/net/wifi/WifiConfiguration;",
-            "Landroid/permission/IPermissionManager;"
+            "Landroid/permission/IPermissionManager;",
+            "Landroid/net/IConnectivityManager;",
+            "Landroid/net/NetworkCapabilities;",
+            "Landroid/net/Network;",
         )
     }
 
@@ -163,6 +168,127 @@ class ShizukuUserService : IUserService.Stub() {
             }.toTypedArray<Any?>()
 
             disconnectMethod.invoke(service, *args)
+            true
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
+    private val connectivityService: Any? by lazy {
+        try {
+            val connectivityBinder = getService(Context.CONNECTIVITY_SERVICE) ?: return@lazy null
+            val connectivityStubClass = Class.forName($$"android.net.IConnectivityManager$Stub")
+            val asInterface = connectivityStubClass.getDeclaredMethod("asInterface", IBinder::class.java)
+            asInterface.invoke(null, connectivityBinder)
+        } catch (_: Throwable) {
+            null
+        }
+    }
+
+    override fun wifiRevalidate(): Boolean {
+        return try {
+            val service = connectivityService ?: return false
+            val clazz = service.javaClass
+
+            val getAllNetworks = clazz.methods.firstOrNull {
+                it.name == "getAllNetworks" && it.parameterTypes.isEmpty()
+            } ?: return false
+
+            @Suppress("UNCHECKED_CAST")
+            val networks = getAllNetworks.invoke(service) as? Array<Network>
+            if (networks.isNullOrEmpty()) return false
+
+            val getCaps = clazz.methods
+                .filter { m ->
+                    m.name == "getNetworkCapabilities" &&
+                            m.parameterTypes.isNotEmpty() &&
+                            m.parameterTypes[0].name == "android.net.Network"
+                }
+                .minByOrNull { it.parameterTypes.size }
+                ?: return false
+
+            fun capsOf(network: Network): Any? = try {
+                val types = getCaps.parameterTypes
+                val args = Array(types.size) { i ->
+                    when {
+                        i == 0 -> network
+                        types[i] == String::class.java ->
+                            if (i == 1) "com.android.shell" else ""
+                        else -> null
+                    }
+                }
+                getCaps.invoke(service, *args)
+            } catch (_: Throwable) {
+                null
+            }
+
+            var hasTransport: java.lang.reflect.Method? = null
+            var hasCapability: java.lang.reflect.Method? = null
+
+            fun ensureNcMethods(caps: Any): Boolean {
+                if (hasTransport == null) {
+                    hasTransport = caps.javaClass.methods.firstOrNull { m ->
+                        m.name == "hasTransport" &&
+                                m.parameterTypes.size == 1 &&
+                                m.parameterTypes[0] == Int::class.javaPrimitiveType
+                    }
+                }
+                if (hasCapability == null) {
+                    hasCapability = caps.javaClass.methods.firstOrNull { m ->
+                        m.name == "hasCapability" &&
+                                m.parameterTypes.size == 1 &&
+                                m.parameterTypes[0] == Int::class.javaPrimitiveType
+                    }
+                }
+                return hasTransport != null && hasCapability != null
+            }
+
+            fun isWifi(caps: Any): Boolean {
+                if (!ensureNcMethods(caps)) return false
+                return hasTransport!!.invoke(
+                    caps,
+                    NetworkCapabilities.TRANSPORT_WIFI
+                ) == true
+            }
+
+            fun isValidated(caps: Any): Boolean {
+                if (!ensureNcMethods(caps)) return false
+                return hasCapability!!.invoke(
+                    caps,
+                    NetworkCapabilities.NET_CAPABILITY_VALIDATED
+                ) == true
+            }
+
+            data class WifiCandidate(val network: Network, val validated: Boolean)
+
+            val candidates = networks.mapNotNull { n ->
+                val caps = capsOf(n) ?: return@mapNotNull null
+                if (!isWifi(caps)) return@mapNotNull null
+                WifiCandidate(n, isValidated(caps))
+            }
+            if (candidates.isEmpty()) return false
+
+            val wifiNetwork =
+                (candidates.firstOrNull { !it.validated } ?: candidates.first()).network
+
+            val report = clazz.methods
+                .filter { m ->
+                    m.name == "reportNetworkConnectivity" &&
+                            m.parameterTypes.size >= 2 &&
+                            m.parameterTypes[0].name == "android.net.Network" &&
+                            m.parameterTypes[1] == Boolean::class.javaPrimitiveType
+                }
+                .minByOrNull { it.parameterTypes.size }
+                ?: return false
+
+            val reportArgs = Array(report.parameterTypes.size) { i ->
+                when (i) {
+                    0 -> wifiNetwork
+                    1 -> true
+                    else -> if (report.parameterTypes[i] == String::class.java) "" else null
+                }
+            }
+            report.invoke(service, *reportArgs)
             true
         } catch (_: Throwable) {
             false

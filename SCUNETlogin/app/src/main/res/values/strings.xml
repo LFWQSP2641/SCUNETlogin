@@ -37,4 +37,7 @@
     <string name="more_action">More</string>
     <string name="app_logo">App Logo</string>
     <string name="add_account">Add</string>
+    <string name="logout_success">Logout successful</string>
+    <string name="logout_failed">Logout failed</string>
+    <string name="logout">Logout</string>
 </resources>

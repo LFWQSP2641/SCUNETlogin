@@ -7,4 +7,5 @@ interface IUserService {
     String getCurrentNetworkSsid() = 2;
     boolean connectToOpenWifi(String ssid) = 3;
     boolean disconnectWifi() = 4;
+    boolean wifiRevalidate() = 5;
 }

@@ -1,5 +1,9 @@
 package com.lfwqsp2641.scunet_login.ui.screens
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,6 +53,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.lfwqsp2641.scunet_login.R
@@ -64,17 +70,17 @@ fun HomeScreen(
     navController: NavController,
     viewModel: HomeViewModel = viewModel()
 ) {
-    val accounts by viewModel.accountsState.collectAsState()
-    val activatedId by viewModel.activatedIdState.collectAsState()
+    val accounts by viewModel.accountsState.collectAsStateWithLifecycle()
+    val activatedId by viewModel.activatedIdState.collectAsStateWithLifecycle()
     val activatedAccount = accounts.firstOrNull { it.id == activatedId } ?: accounts.firstOrNull()
 
     val showAccountListSheet = remember { mutableStateOf(false) }
     val accountListSheetState = rememberModalBottomSheetState()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val currentSsid by viewModel.currentSsid.collectAsState()
+    val currentSsid by viewModel.currentSsid.collectAsStateWithLifecycle()
 
-    val isShizukuEnabled by viewModel.isShizukuEnabled.collectAsState()
+    val isShizukuEnabled by viewModel.isShizukuEnabled.collectAsStateWithLifecycle()
     var autoManageNetworkChecked by rememberSaveable { mutableStateOf(isShizukuEnabled) }
 
     // Update autoManageNetworkChecked when isShizukuEnabled changes
@@ -370,16 +376,85 @@ private fun HomeLoginButton(
     autoManageNetworkChecked: Boolean,
     modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
-        onClick = {
-            viewModel.startLogin(autoManageNetworkChecked)
-        },
-        modifier = modifier
+    val isAccessLocalNetworkGranted by viewModel.isAccessLocalNetworkPermissionGrantedFlow.collectAsStateWithLifecycle()
+    val isShizukuEnabled by viewModel.isShizukuEnabled.collectAsStateWithLifecycle()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissionsMap ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+            permissionsMap[Manifest.permission.ACCESS_LOCAL_NETWORK]
+        } else {
+            true
+        }?.let { viewModel.setAccessLocalNetworkPermissionGranted(it) }
+    }
+
+    LifecycleResumeEffect(Unit) {
+        viewModel.checkAccessLocalNetworkPermission()
+        onPauseOrDispose {}
+    }
+
+    var expanded by remember { mutableStateOf(false) }
+
+    Row(
+        modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        shape = RoundedCornerShape(16.dp)
     ) {
-        Text(stringResource(R.string.login))
+        OutlinedButton(
+            onClick = {
+                if (!isAccessLocalNetworkGranted
+                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+                    val permissions = listOf(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                    if (isShizukuEnabled) {
+                        viewModel.grantPermissionsByShizuku(permissions)
+                        return@OutlinedButton
+                    }
+                    permissionLauncher.launch(permissions.toTypedArray())
+                    return@OutlinedButton
+                }
+                viewModel.startLogin(autoManageNetworkChecked)
+            },
+            modifier = Modifier
+                .weight(1f)
+                .padding(4.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Text(stringResource(R.string.login))
+        }
+        Box {
+            IconButton(
+                onClick = { expanded = true },
+                modifier = Modifier.padding(4.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_more_vert),
+                    contentDescription = stringResource(R.string.more_action)
+                )
+            }
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.logout)) },
+                    onClick = {
+                        expanded = false
+                        if (!isAccessLocalNetworkGranted
+                            && Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+                            val permissions = listOf(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                            if (isShizukuEnabled) {
+                                viewModel.grantPermissionsByShizuku(permissions)
+                                return@DropdownMenuItem
+                            }
+                            permissionLauncher.launch(permissions.toTypedArray())
+                            return@DropdownMenuItem
+                        }
+                        viewModel.startLogout(autoManageNetworkChecked)
+                    }
+                )
+            }
+        }
     }
 }
 

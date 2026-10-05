@@ -7,13 +7,15 @@ plugins {
 android {
     namespace = "com.lfwqsp2641.scunet_login"
     compileSdk {
-        version = release(37)
+        version = release(37) {
+            minorApiLevel = 2
+        }
     }
 
     defaultConfig {
         applicationId = "com.lfwqsp2641.scunet_login"
         minSdk = 28
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 5
         versionName = "1.1.3"
 
@@ -23,6 +25,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -30,6 +33,7 @@ android {
         }
         debug {
             isMinifyEnabled = false
+            isShrinkResources = false
             applicationIdSuffix = ".debug"
         }
     }

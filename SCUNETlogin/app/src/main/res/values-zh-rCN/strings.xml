@@ -38,4 +38,7 @@
     <string name="more_action">更多</string>
     <string name="app_logo">应用图标</string>
     <string name="add_account">添加</string>
+    <string name="logout_success">下线成功</string>
+    <string name="logout_failed">下线失败</string>
+    <string name="logout">下线</string>
 </resources>

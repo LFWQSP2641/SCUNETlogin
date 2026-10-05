@@ -20,10 +20,12 @@ import kotlinx.coroutines.delay
 import java.io.IOException
 import java.net.URL
 import javax.net.SocketFactory
+import kotlin.time.Duration.Companion.milliseconds
 
 object LoginConstants {
     const val mainUrl = "http://192.168.2.135/"
     const val loginPath = "eportal/InterFace.do?method=login"
+    const val logoutPath = "eportal/InterFace.do?method=logout"
     const val externalPortalHost = "123.123.123.123"
     const val maxRetryAttempts = 3
     const val retryBaseDelayMillis = 300L
@@ -35,7 +37,7 @@ object LoginConstants {
         "edunet" to "internet",                                      // 教育出口
     )
     const val httpHeaderUserAgent =
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36 Edg/134.0.0.0"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/154.0.0.0 Safari/537.36"
     const val httpHeaderContentType = "application/x-www-form-urlencoded; charset=UTF-8"
     const val httpHeaderAccept = "*/*"
 
@@ -91,6 +93,21 @@ class LoginService(
         runWithRetry {
             val queryString = getLoginQueryString()
             postLoginRequest(queryString, account)
+        }
+    }
+
+    suspend fun startLogout() {
+        runWithRetry {
+            postLogoutRequest()
+        }
+    }
+
+    private suspend fun postLogoutRequest() {
+        val logoutUrl = resolveRedirectUrl(LoginConstants.mainUrl, LoginConstants.logoutPath)
+        client.post(logoutUrl) {
+            header(HttpHeaders.UserAgent, LoginConstants.httpHeaderUserAgent)
+            header(HttpHeaders.ContentType, LoginConstants.httpHeaderContentType)
+            header(HttpHeaders.Accept, LoginConstants.httpHeaderAccept)
         }
     }
 
@@ -294,7 +311,7 @@ class LoginService(
                     throw error
                 }
 
-                delay(delayMillis)
+                delay(delayMillis.milliseconds)
                 delayMillis *= 2
                 attempt++
             }

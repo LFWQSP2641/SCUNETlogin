@@ -106,4 +106,13 @@ object ShizukuManager {
             Log.e(TAG, "Failed to grant permission via Shizuku", e)
         }
     }
+
+    fun wifiRevalidate(): Boolean {
+        return try {
+            userService?.wifiRevalidate() ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to revalidate WiFi via Shizuku", e)
+            false
+        }
+    }
 }

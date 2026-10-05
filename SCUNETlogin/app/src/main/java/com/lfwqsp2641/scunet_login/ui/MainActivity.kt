@@ -11,10 +11,20 @@ import com.lfwqsp2641.scunet_login.ui.theme.SCUNETloginTheme
 import com.lfwqsp2641.scunet_login.utils.hasShizukuPermission
 import rikka.shizuku.Shizuku
 
-class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListener {
+class MainActivity : ComponentActivity() {
     companion object {
         private const val SHIZUKU_PERM = 10001
     }
+
+    private val shizukuPermissionListener: Shizuku.OnRequestPermissionResultListener =
+        Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
+            if (requestCode == SHIZUKU_PERM) {
+                Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
+                if (grantResult == PackageManager.PERMISSION_GRANTED) {
+                    ShizukuManager.init(applicationContext)
+                }
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -32,22 +42,13 @@ class MainActivity : ComponentActivity(), Shizuku.OnRequestPermissionResultListe
     }
 
     private fun requestShizukuPermission() {
-        Shizuku.addRequestPermissionResultListener(this)
+        Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
         Shizuku.requestPermission(SHIZUKU_PERM)
-    }
-
-    override fun onRequestPermissionResult(requestCode: Int, grantResult: Int) {
-        if (requestCode == SHIZUKU_PERM) {
-            Shizuku.removeRequestPermissionResultListener(this)
-            if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                ShizukuManager.init(applicationContext)
-            }
-        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        Shizuku.removeRequestPermissionResultListener(this)
+        Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
         ShizukuManager.unbind()
     }
 }
