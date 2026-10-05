@@ -31,14 +31,13 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -397,7 +396,7 @@ private fun HomeLoginButton(
     var expanded by remember { mutableStateOf(false) }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(16.dp),
     ) {
@@ -415,7 +414,7 @@ private fun HomeLoginButton(
                 }
                 viewModel.startLogin(autoManageNetworkChecked)
             },
-            modifier = Modifier
+            modifier = modifier
                 .weight(1f)
                 .padding(4.dp),
             shape = RoundedCornerShape(16.dp)
@@ -425,7 +424,7 @@ private fun HomeLoginButton(
         Box {
             IconButton(
                 onClick = { expanded = true },
-                modifier = Modifier.padding(4.dp)
+                modifier = modifier.padding(4.dp)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_more_vert),

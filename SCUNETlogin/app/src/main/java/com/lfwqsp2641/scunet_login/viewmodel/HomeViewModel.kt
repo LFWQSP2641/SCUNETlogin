@@ -37,7 +37,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.atomic.AtomicBoolean
-import javax.net.SocketFactory
 import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.milliseconds
 

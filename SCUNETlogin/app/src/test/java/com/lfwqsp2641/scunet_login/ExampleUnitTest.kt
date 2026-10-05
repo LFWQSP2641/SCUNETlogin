@@ -1,9 +1,8 @@
 package com.lfwqsp2641.scunet_login
 
 import com.lfwqsp2641.scunet_login.helper.LegacyCampusRsaEncryptor
+import org.junit.Assert.assertEquals
 import org.junit.Test
-
-import org.junit.Assert.*
 
 /**
  * Example local unit test, which will execute on the development machine (host).
