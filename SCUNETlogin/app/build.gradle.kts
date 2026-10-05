@@ -16,8 +16,8 @@ android {
         applicationId = "com.lfwqsp2641.scunet_login"
         minSdk = 28
         targetSdk = 37
-        versionCode = 5
-        versionName = "1.1.3"
+        versionCode = 6
+        versionName = "1.2.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

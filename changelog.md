@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.0 - 2026-10-05
+
+- Add support for Android 17
+- Add `logout` support
+- Update dependencies
+
 ## 1.1.3 - 2026-04-23
 
 - Update dependencies
