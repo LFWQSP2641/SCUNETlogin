@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.1 - 2026-10-29
+
+- Update dependencies
+
 ## 1.2.0 - 2026-10-05
 
 - Add support for Android 17
