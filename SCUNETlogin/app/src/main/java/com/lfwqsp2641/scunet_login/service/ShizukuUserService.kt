@@ -178,7 +178,8 @@ class ShizukuUserService : IUserService.Stub() {
         try {
             val connectivityBinder = getService(Context.CONNECTIVITY_SERVICE) ?: return@lazy null
             val connectivityStubClass = Class.forName($$"android.net.IConnectivityManager$Stub")
-            val asInterface = connectivityStubClass.getDeclaredMethod("asInterface", IBinder::class.java)
+            val asInterface =
+                connectivityStubClass.getDeclaredMethod("asInterface", IBinder::class.java)
             asInterface.invoke(null, connectivityBinder)
         } catch (_: Throwable) {
             null
@@ -214,6 +215,7 @@ class ShizukuUserService : IUserService.Stub() {
                         i == 0 -> network
                         types[i] == String::class.java ->
                             if (i == 1) "com.android.shell" else ""
+
                         else -> null
                     }
                 }

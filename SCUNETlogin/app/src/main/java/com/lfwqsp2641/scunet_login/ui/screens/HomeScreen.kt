@@ -19,23 +19,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,39 +28,52 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavController
 import com.lfwqsp2641.scunet_login.R
 import com.lfwqsp2641.scunet_login.data.dto.Account
 import com.lfwqsp2641.scunet_login.ui.Routes
 import com.lfwqsp2641.scunet_login.ui.model.ServiceDisplay
 import com.lfwqsp2641.scunet_login.viewmodel.HomeViewModel
+import top.yukonga.miuix.kmp.basic.Button
+import top.yukonga.miuix.kmp.basic.Card
+import top.yukonga.miuix.kmp.basic.Checkbox
+import top.yukonga.miuix.kmp.basic.DropdownEntry
+import top.yukonga.miuix.kmp.basic.DropdownItem
+import top.yukonga.miuix.kmp.basic.Icon
+import top.yukonga.miuix.kmp.basic.IconButton
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.basic.SnackbarHost
+import top.yukonga.miuix.kmp.basic.SnackbarHostState
+import top.yukonga.miuix.kmp.basic.Surface
+import top.yukonga.miuix.kmp.basic.Text
+import top.yukonga.miuix.kmp.menu.OverlayIconDropdownMenu
+import top.yukonga.miuix.kmp.nav.core.NavController
+import top.yukonga.miuix.kmp.overlay.OverlayBottomSheet
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     modifier: Modifier = Modifier,
     navController: NavController,
-    viewModel: HomeViewModel = viewModel()
 ) {
+    val viewModel: HomeViewModel = viewModel()
     val accounts by viewModel.accountsState.collectAsStateWithLifecycle()
     val activatedId by viewModel.activatedIdState.collectAsStateWithLifecycle()
     val activatedAccount = accounts.firstOrNull { it.id == activatedId } ?: accounts.firstOrNull()
 
-    val showAccountListSheet = remember { mutableStateOf(false) }
-    val accountListSheetState = rememberModalBottomSheetState()
+    var accountListBottomSheet by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
 
     val currentSsid by viewModel.currentSsid.collectAsStateWithLifecycle()
+    val networkStatus = currentSsid ?: stringResource(R.string.network_fetching)
 
     val isShizukuEnabled by viewModel.isShizukuEnabled.collectAsStateWithLifecycle()
     var autoManageNetworkChecked by rememberSaveable { mutableStateOf(isShizukuEnabled) }
@@ -94,69 +90,113 @@ fun HomeScreen(
         }
     }
 
-    Box(modifier = modifier) {
-        Column(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        modifier = modifier,
+        snackbarHost = {
+            SnackbarHost(state = snackbarHostState)
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
             HomeAccountSection(
                 activatedAccount = activatedAccount,
                 navController = navController,
-                onSelectAccount = { showAccountListSheet.value = true }
+                onSelectAccount = { accountListBottomSheet = true }
             )
             Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text = "当前网络: ${currentSsid ?: "获取中/未连接"}",
-                modifier = Modifier
-                    .padding(16.dp)
-                    .clickable(
-                        onClick = { viewModel.fetchSsid() }
-                    )
-            )
-            Row(
+            Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .toggleable(
-                        value = autoManageNetworkChecked,
-                        role = Role.Checkbox,
-                        onValueChange = { autoManageNetworkChecked = it }
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                cornerRadius = 16.dp
             ) {
-                Checkbox(
-                    checked = autoManageNetworkChecked,
-                    onCheckedChange = null
-                )
-                Text(
-                    text = "登录时自动管理网络（Shizuku）",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.current_network, networkStatus),
+                        style = MiuixTheme.textStyles.body1,
+                        color = MiuixTheme.colorScheme.onSurfaceContainer,
+                        modifier = Modifier.clickable(onClick = { viewModel.fetchSsid() })
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .toggleable(
+                                value = autoManageNetworkChecked,
+                                role = Role.Checkbox,
+                                onValueChange = { autoManageNetworkChecked = it }
+                            ),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Checkbox(
+                            state = ToggleableState(autoManageNetworkChecked),
+                            onClick = null
+                        )
+                        Text(
+                            text = stringResource(R.string.auto_manage_network_shizuku),
+                            style = MiuixTheme.textStyles.body2,
+                            color = MiuixTheme.colorScheme.onSurfaceContainer
+                        )
+                    }
+                }
             }
             HomeLoginButton(
                 viewModel = viewModel,
                 autoManageNetworkChecked = autoManageNetworkChecked
             )
         }
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
-    }
-
-    if (showAccountListSheet.value) {
-        AccountListBottomSheet(
-            accounts = accounts,
-            sheetState = accountListSheetState,
-            onDismiss = { showAccountListSheet.value = false },
-            onSelectAccount = { account ->
-                viewModel.activateAccount(account.id)
-                showAccountListSheet.value = false
-            },
-            onEditAccount = { accountId ->
-                showAccountListSheet.value = false
-                navController.navigate(Routes.AccountEditor(id = accountId))
-            },
-            onDeleteAccount = { accountId -> viewModel.deleteAccount(accountId) }
-        )
+        OverlayBottomSheet(
+            show = accountListBottomSheet,
+            onDismissRequest = { accountListBottomSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.account),
+                    style = MiuixTheme.textStyles.title1,
+                    fontWeight = FontWeight.Bold,
+                    color = MiuixTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(
+                        start = 24.dp,
+                        end = 24.dp,
+                        top = 8.dp,
+                        bottom = 16.dp,
+                    ),
+                )
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 400.dp)
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(vertical = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(accounts, key = { account -> account.id }) { account ->
+                        AccountListItem(
+                            account = account,
+                            onSelect = {
+                                viewModel.activateAccount(account.id)
+                                accountListBottomSheet = false
+                            },
+                            onEdit = {
+                                accountListBottomSheet = false
+                                navController.push(Routes.AccountEditor(id = account.id))
+                            },
+                            onDelete = { viewModel.deleteAccount(account.id) }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -167,26 +207,18 @@ private fun HomeAccountSection(
     onSelectAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val subtleDeeperContainerColor = lerp(
-        MaterialTheme.colorScheme.secondaryContainer,
-        Color.Black,
-        0.08f
-    )
-
-    Surface(
+    Card(
         modifier = modifier.padding(16.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(16.dp)
+        cornerRadius = 16.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             HomeAccountHeader(
-                subtleDeeperContainerColor = subtleDeeperContainerColor,
                 onAddAccount = {
-                    navController.navigate(Routes.AccountEditor(id = null))
+                    navController.push(Routes.AccountEditor(id = null))
                 }
             )
 
@@ -195,7 +227,6 @@ private fun HomeAccountSection(
             } else {
                 AccountContent(
                     activatedAccount = activatedAccount,
-                    subtleDeeperContainerColor = subtleDeeperContainerColor,
                     onSelectAccount = onSelectAccount
                 )
             }
@@ -205,37 +236,35 @@ private fun HomeAccountSection(
 
 @Composable
 private fun HomeAccountHeader(
-    subtleDeeperContainerColor: Color,
     onAddAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier,
+        modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
             painter = painterResource(R.drawable.ic_description),
             contentDescription = stringResource(R.string.account),
-            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            tint = MiuixTheme.colorScheme.primary,
         )
         Text(
             text = stringResource(R.string.account),
-            color = MaterialTheme.colorScheme.onSecondaryContainer,
+            color = MiuixTheme.colorScheme.onSurfaceContainer,
             fontWeight = FontWeight.Bold,
+            style = MiuixTheme.textStyles.title2,
         )
         Spacer(modifier = Modifier.weight(1f))
-        FilledIconButton(
+        IconButton(
             onClick = onAddAccount,
-            shape = RoundedCornerShape(12.dp),
-            colors = IconButtonDefaults.filledIconButtonColors(
-                containerColor = subtleDeeperContainerColor,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer
-            )
+            cornerRadius = 12.dp,
+            backgroundColor = MiuixTheme.colorScheme.surfaceContainerHigh,
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_add),
-                contentDescription = stringResource(R.string.add_account)
+                contentDescription = stringResource(R.string.add_account),
+                tint = MiuixTheme.colorScheme.primary,
             )
         }
     }
@@ -251,7 +280,7 @@ private fun NoAccountPlaceholder(modifier: Modifier = Modifier) {
     ) {
         Text(
             stringResource(R.string.no_account),
-            color = MaterialTheme.colorScheme.onSecondaryContainer
+            color = MiuixTheme.colorScheme.onSurfaceSecondary
         )
     }
 }
@@ -259,7 +288,6 @@ private fun NoAccountPlaceholder(modifier: Modifier = Modifier) {
 @Composable
 private fun AccountContent(
     activatedAccount: Account,
-    subtleDeeperContainerColor: Color,
     onSelectAccount: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -270,12 +298,10 @@ private fun AccountContent(
     ) {
         AccountSelectionButton(
             account = activatedAccount,
-            subtleDeeperContainerColor = subtleDeeperContainerColor,
             onSelect = onSelectAccount
         )
         AccountDetailsCard(
-            account = activatedAccount,
-            subtleDeeperContainerColor = subtleDeeperContainerColor
+            account = activatedAccount
         )
     }
 }
@@ -283,31 +309,36 @@ private fun AccountContent(
 @Composable
 private fun AccountSelectionButton(
     account: Account,
-    subtleDeeperContainerColor: Color,
     onSelect: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Surface(
-        color = subtleDeeperContainerColor,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        shape = RoundedCornerShape(16.dp),
+        color = MiuixTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MiuixTheme.colorScheme.onSurfaceContainerHigh,
+        shape = RoundedCornerShape(12.dp),
         onClick = onSelect,
         modifier = modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_draft),
-                contentDescription = stringResource(R.string.configuration)
+                contentDescription = stringResource(R.string.configuration),
+                tint = MiuixTheme.colorScheme.primary
             )
-            Text(text = account.remark)
+            Text(
+                text = account.remark,
+                style = MiuixTheme.textStyles.body1,
+                fontWeight = FontWeight.Medium
+            )
             Spacer(modifier = Modifier.weight(1f))
             Icon(
                 painter = painterResource(R.drawable.ic_unfold_more),
-                contentDescription = stringResource(R.string.toggle_account)
+                contentDescription = stringResource(R.string.toggle_account),
+                tint = MiuixTheme.colorScheme.onSurfaceSecondary
             )
         }
     }
@@ -316,7 +347,6 @@ private fun AccountSelectionButton(
 @Composable
 private fun AccountDetailsCard(
     account: Account,
-    subtleDeeperContainerColor: Color,
     modifier: Modifier = Modifier
 ) {
     val selectedOptionText =
@@ -324,14 +354,14 @@ private fun AccountDetailsCard(
             ?: ServiceDisplay.EduNet
 
     Surface(
-        color = subtleDeeperContainerColor,
-        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        shape = RoundedCornerShape(16.dp),
+        color = MiuixTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MiuixTheme.colorScheme.onSurfaceContainerHigh,
+        shape = RoundedCornerShape(12.dp),
         modifier = modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             AccountDetailRow(
                 label = stringResource(R.string.student_id_label),
@@ -358,13 +388,14 @@ private fun AccountDetailRow(
     ) {
         Text(
             text = label,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.7f)
+            style = MiuixTheme.textStyles.footnote1,
+            color = MiuixTheme.colorScheme.onSurfaceSecondary
         )
         Text(
             text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = FontWeight.Medium
+            style = MiuixTheme.textStyles.body2,
+            fontWeight = FontWeight.Medium,
+            color = MiuixTheme.colorScheme.onSurfaceContainerHigh
         )
     }
 }
@@ -388,125 +419,70 @@ private fun HomeLoginButton(
         }?.let { viewModel.setAccessLocalNetworkPermissionGranted(it) }
     }
 
+    val entry = DropdownEntry(
+        items = listOf(
+            DropdownItem(
+                text = stringResource(R.string.logout),
+                onClick = {
+                    if (!isAccessLocalNetworkGranted
+                        && Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN
+                    ) {
+                        val permissions = listOf(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                        if (isShizukuEnabled) {
+                            viewModel.grantPermissionsByShizuku(permissions)
+                            return@DropdownItem
+                        }
+                        permissionLauncher.launch(permissions.toTypedArray())
+                        return@DropdownItem
+                    }
+                    viewModel.startLogout(autoManageNetworkChecked)
+                }
+            )
+        )
+    )
+
     LifecycleResumeEffect(Unit) {
         viewModel.checkAccessLocalNetworkPermission()
         onPauseOrDispose {}
     }
 
-    var expanded by remember { mutableStateOf(false) }
-
     Row(
         modifier = modifier
             .fillMaxWidth()
             .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        OutlinedButton(
+        Button(
             onClick = {
                 if (!isAccessLocalNetworkGranted
-                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
+                    && Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN
+                ) {
                     val permissions = listOf(Manifest.permission.ACCESS_LOCAL_NETWORK)
                     if (isShizukuEnabled) {
                         viewModel.grantPermissionsByShizuku(permissions)
-                        return@OutlinedButton
+                        return@Button
                     }
                     permissionLauncher.launch(permissions.toTypedArray())
-                    return@OutlinedButton
+                    return@Button
                 }
                 viewModel.startLogin(autoManageNetworkChecked)
             },
-            modifier = modifier
+            modifier = Modifier
                 .weight(1f)
-                .padding(4.dp),
-            shape = RoundedCornerShape(16.dp)
+                .padding(end = 8.dp),
+            cornerRadius = 16.dp
         ) {
             Text(stringResource(R.string.login))
         }
-        Box {
-            IconButton(
-                onClick = { expanded = true },
-                modifier = modifier.padding(4.dp)
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_more_vert),
-                    contentDescription = stringResource(R.string.more_action)
-                )
-            }
-            DropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false }
-            ) {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.logout)) },
-                    onClick = {
-                        expanded = false
-                        if (!isAccessLocalNetworkGranted
-                            && Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
-                            val permissions = listOf(Manifest.permission.ACCESS_LOCAL_NETWORK)
-                            if (isShizukuEnabled) {
-                                viewModel.grantPermissionsByShizuku(permissions)
-                                return@DropdownMenuItem
-                            }
-                            permissionLauncher.launch(permissions.toTypedArray())
-                            return@DropdownMenuItem
-                        }
-                        viewModel.startLogout(autoManageNetworkChecked)
-                    }
-                )
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun AccountListBottomSheet(
-    accounts: List<Account>,
-    sheetState: androidx.compose.material3.SheetState,
-    onDismiss: () -> Unit,
-    onSelectAccount: (Account) -> Unit,
-    onEditAccount: (String) -> Unit,
-    onDeleteAccount: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-        modifier = modifier
-    ) {
-        Column(
+        OverlayIconDropdownMenu(
+            entry = entry,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 16.dp),
         ) {
-            Text(
-                text = stringResource(R.string.account),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(
-                    start = 24.dp,
-                    end = 24.dp,
-                    top = 8.dp,
-                    bottom = 16.dp,
-                ),
+            Icon(
+                painter = painterResource(R.drawable.ic_more_vert),
+                contentDescription = stringResource(R.string.more_action),
+                tint = MiuixTheme.colorScheme.onSurface
             )
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = 100.dp, max = 400.dp)
-                    .padding(horizontal = 16.dp),
-                contentPadding = PaddingValues(vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(accounts, key = { account -> account.id }) { account ->
-                    AccountListItem(
-                        account = account,
-                        onSelect = { onSelectAccount(account) },
-                        onEdit = { onEditAccount(account.id) },
-                        onDelete = { onDeleteAccount(account.id) }
-                    )
-                }
-            }
         }
     }
 }
@@ -519,8 +495,6 @@ private fun AccountListItem(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val menuExpanded = remember { mutableStateOf(false) }
-
     Card(
         onClick = onSelect,
         modifier = modifier
@@ -528,29 +502,32 @@ private fun AccountListItem(
             .padding(horizontal = 8.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_draft),
-                contentDescription = stringResource(R.string.configuration)
+                contentDescription = stringResource(R.string.configuration),
+                tint = MiuixTheme.colorScheme.primary
             )
-            Column {
+            Column(
+                modifier = Modifier.weight(1f)
+            ) {
                 Text(
                     text = account.remark,
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MiuixTheme.textStyles.body2,
+                    color = MiuixTheme.colorScheme.onSurface
                 )
                 Text(
                     text = "${account.service} - ${account.username}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = MiuixTheme.textStyles.footnote1,
+                    color = MiuixTheme.colorScheme.onSurfaceSecondary
                 )
             }
-            Spacer(modifier = Modifier.weight(1f))
             AccountListItemMenu(
-                menuExpanded = menuExpanded.value,
-                onExpandedChange = { menuExpanded.value = it },
                 onEdit = onEdit,
                 onDelete = onDelete
             )
@@ -560,41 +537,31 @@ private fun AccountListItem(
 
 @Composable
 private fun AccountListItemMenu(
-    menuExpanded: Boolean,
-    onExpandedChange: (Boolean) -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier) {
-        IconButton(
-            onClick = {
-                onExpandedChange(true)
-            }
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_more_vert),
-                contentDescription = stringResource(R.string.more_action)
+    val entry = DropdownEntry(
+        items = listOf(
+            DropdownItem(
+                text = stringResource(R.string.edit_action),
+                onClick = onEdit
+            ),
+            DropdownItem(
+                text = stringResource(R.string.delete),
+                onClick = onDelete
             )
-        }
-        DropdownMenu(
-            expanded = menuExpanded,
-            onDismissRequest = { onExpandedChange(false) }
-        ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.edit_action)) },
-                onClick = {
-                    onExpandedChange(false)
-                    onEdit()
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.delete)) },
-                onClick = {
-                    onExpandedChange(false)
-                    onDelete()
-                }
-            )
-        }
+        )
+    )
+
+    OverlayIconDropdownMenu(
+        entry = entry,
+        modifier = modifier
+    ) {
+        Icon(
+            painter = painterResource(R.drawable.ic_more_vert),
+            contentDescription = stringResource(R.string.more_action),
+            tint = MiuixTheme.colorScheme.onSurfaceSecondary
+        )
     }
 }
