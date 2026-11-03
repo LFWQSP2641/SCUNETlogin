@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0 - 2026-11-03
+
+- Migrate from Material3 to miuix
+- Update dependencies
+
 ## 1.2.1 - 2026-10-29
 
 - Update dependencies
