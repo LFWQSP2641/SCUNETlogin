@@ -61,7 +61,7 @@ fun LogScreen(modifier: Modifier = Modifier) {
                         }
                     ) {
                         Icon(
-                            painter = painterResource(R.drawable.ic_vertical_align_bottom),
+                            painter = painterResource(R.drawable.ic_keyboard_double_arrow_down),
                             contentDescription = stringResource(R.string.scroll_to_bottom),
                             tint = MiuixTheme.colorScheme.onSurface
                         )
