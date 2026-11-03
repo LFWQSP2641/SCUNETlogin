@@ -41,4 +41,8 @@
     <string name="logout_success">下线成功</string>
     <string name="logout_failed">下线失败</string>
     <string name="logout">下线</string>
+    <string name="remark">别名</string>
+    <string name="auto_manage_network_shizuku">登录时自动管理网络（Shizuku）</string>
+    <string name="current_network">当前网络: %s</string>
+    <string name="network_fetching">获取中</string>
 </resources>

@@ -204,7 +204,10 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                     TaskLogging.addLog("Try shizuku wifiRevalidate", TaskLog.LogLevel.INFO)
                     val wifiRevalidateResult = ShizukuManager.wifiRevalidate()
                     if (!wifiRevalidateResult) {
-                        TaskLogging.addLog("wifiRevalidate failed, try reconnecting", TaskLog.LogLevel.WARN)
+                        TaskLogging.addLog(
+                            "wifiRevalidate failed, try reconnecting",
+                            TaskLog.LogLevel.WARN
+                        )
                         ShizukuManager.disconnectWifi()
                         ShizukuManager.connectToOpenWifi("SCUNET")
                     }

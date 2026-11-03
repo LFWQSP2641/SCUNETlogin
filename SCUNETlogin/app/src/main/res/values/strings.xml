@@ -40,4 +40,8 @@
     <string name="logout_success">Logout successful</string>
     <string name="logout_failed">Logout failed</string>
     <string name="logout">Logout</string>
+    <string name="remark">Remark</string>
+    <string name="auto_manage_network_shizuku">Auto-manage network at login (Shizuku)</string>
+    <string name="current_network">Current Network: %s</string>
+    <string name="network_fetching">Fetching</string>
 </resources>

@@ -1,48 +1,45 @@
 package com.lfwqsp2641.scunet_login.ui.screens
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.currentBackStackEntryAsState
-import androidx.navigation.compose.rememberNavController
-import androidx.navigation.toRoute
+import androidx.compose.ui.res.vectorResource
 import com.lfwqsp2641.scunet_login.R
 import com.lfwqsp2641.scunet_login.ui.Routes
+import top.yukonga.miuix.kmp.basic.NavigationBar
+import top.yukonga.miuix.kmp.basic.NavigationBarItem
+import top.yukonga.miuix.kmp.basic.Scaffold
+import top.yukonga.miuix.kmp.nav.core.NavController
+import top.yukonga.miuix.kmp.nav.core.NavDisplay
+import top.yukonga.miuix.kmp.nav.core.rememberNavBackStack
+import top.yukonga.miuix.kmp.theme.MiuixTheme
 
-@Preview(locale = "zh-rCN", showBackground = true)
 @Composable
 fun RootScreen() {
-    val navController = rememberNavController()
+    val backStack = rememberNavBackStack<Routes>(Routes.MainShell)
+    val navController = NavController(backStack)
 
-    NavHost(
-        navController = navController,
-        startDestination = Routes.MainShell,
+    NavDisplay(
+        backStack = backStack,
+        onBack = { backStack.removeLastOrNull() },
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .background(MiuixTheme.colorScheme.background)
     ) {
-        composable<Routes.MainShell> {
+        entry<Routes.MainShell> {
             MainShell(rootNavController = navController)
         }
 
-        composable<Routes.AccountEditor> { backStackEntry ->
-            val route: Routes.AccountEditor = backStackEntry.toRoute()
-
+        entry<Routes.AccountEditor> { route ->
             AccountEditorScreen(
                 accountId = route.id,
                 navController = navController
@@ -52,53 +49,41 @@ fun RootScreen() {
 }
 
 @Composable
-fun MainShell(rootNavController: NavHostController) {
-    val innerNavController = rememberNavController()
-    val backStackEntry by innerNavController.currentBackStackEntryAsState()
-    val currentRoute = backStackEntry?.destination?.route
+fun MainShell(rootNavController: NavController) {
+    var currentTab by remember { mutableStateOf(AppTab.HOME) }
 
-    NavigationSuiteScaffold(
-        navigationSuiteItems = {
-            AppDestinations.entries.forEach { dest ->
-                item(
-                    icon = { Icon(painterResource(dest.icon), contentDescription = null) },
-                    label = { Text(stringResource(dest.label)) },
-                    selected = currentRoute == dest.route,
-                    onClick = {
-                        innerNavController.navigate(dest.route) {
-                            popUpTo(innerNavController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                )
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                AppTab.entries.forEach { tab ->
+                    NavigationBarItem(
+                        selected = currentTab == tab,
+                        onClick = { currentTab = tab },
+                        icon = ImageVector.vectorResource(tab.icon),
+                        label = stringResource(tab.label),
+                    )
+                }
             }
         }
-    ) {
-    Scaffold { innerPadding ->
-        NavHost(
-            navController = innerNavController,
-            startDestination = AppDestinations.HOME.route,
+    ) { innerPadding ->
+        Box(
             modifier = Modifier
-                .padding(innerPadding)
-                .background(MaterialTheme.colorScheme.background)
+                .fillMaxSize()
+                .padding(bottom = innerPadding.calculateBottomPadding())
+                .background(MiuixTheme.colorScheme.background)
         ) {
-            composable(AppDestinations.HOME.route) { HomeScreen(Modifier, rootNavController) }
-            composable(AppDestinations.LOG.route) { LogScreen() }
-            // composable(AppDestinations.PROFILE.route) { SettingsScreen() }
+            when (currentTab) {
+                AppTab.HOME -> HomeScreen(Modifier, rootNavController)
+                AppTab.LOG -> LogScreen()
+            }
         }
-    }
     }
 }
 
-enum class AppDestinations(
-    val route: String,
+enum class AppTab(
     val label: Int,
     val icon: Int
 ) {
-    HOME("home", R.string.home, R.drawable.ic_home),
-    LOG("log", R.string.log, R.drawable.ic_description),
-    // PROFILE("settings", R.string.settings, R.drawable.ic_settings),
+    HOME(R.string.home, R.drawable.ic_home),
+    LOG(R.string.log, R.drawable.ic_description),
 }
