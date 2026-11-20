@@ -129,7 +129,17 @@ fun HomeScreen(
                             .toggleable(
                                 value = autoManageNetworkChecked,
                                 role = Role.Checkbox,
-                                onValueChange = { autoManageNetworkChecked = it }
+                                onValueChange = { newValue ->
+                                    if (newValue) {
+                                        if (isShizukuEnabled) {
+                                            autoManageNetworkChecked = true
+                                        } else {
+                                            viewModel.requestShizukuPermission()
+                                        }
+                                    } else {
+                                        autoManageNetworkChecked = false
+                                    }
+                                }
                             ),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -443,6 +453,7 @@ private fun HomeLoginButton(
 
     LifecycleResumeEffect(Unit) {
         viewModel.checkAccessLocalNetworkPermission()
+        viewModel.fetchShizukuStatus()
         onPauseOrDispose {}
     }
 

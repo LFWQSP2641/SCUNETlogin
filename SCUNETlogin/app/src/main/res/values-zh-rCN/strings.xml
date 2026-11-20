@@ -43,6 +43,10 @@
     <string name="logout">下线</string>
     <string name="remark">别名</string>
     <string name="auto_manage_network_shizuku">登录时自动管理网络（Shizuku）</string>
+    <string name="shizuku_not_running">Shizuku 服务未运行，请先启动 Shizuku</string>
+    <string name="shizuku_permission_denied">Shizuku 权限请求被拒绝</string>
+    <string name="shizuku_permission_failed">请求 Shizuku 权限失败</string>
+    <string name="permission_denied">权限请求被拒绝</string>
     <string name="current_network">当前网络: %s</string>
     <string name="network_fetching">获取中</string>
 </resources>

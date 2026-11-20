@@ -42,6 +42,10 @@
     <string name="logout">Logout</string>
     <string name="remark">Remark</string>
     <string name="auto_manage_network_shizuku">Auto-manage network at login (Shizuku)</string>
+    <string name="shizuku_not_running">Shizuku is not running, please start Shizuku first</string>
+    <string name="shizuku_permission_denied">Shizuku permission request denied</string>
+    <string name="shizuku_permission_failed">Failed to request Shizuku permission</string>
+    <string name="permission_denied">Permission request denied</string>
     <string name="current_network">Current Network: %s</string>
     <string name="network_fetching">Fetching</string>
 </resources>

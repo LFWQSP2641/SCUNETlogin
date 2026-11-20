@@ -64,6 +64,7 @@ fun MainShell(rootNavController: NavController) {
                                             tabBackStack.removeLastOrNull()
                                         }
                                     }
+
                                     TabRoutes.Log -> {
                                         tabNavController.push(TabRoutes.Log)
                                     }
