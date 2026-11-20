@@ -1,20 +1,16 @@
 package com.lfwqsp2641.scunet_login.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import com.lfwqsp2641.scunet_login.R
 import com.lfwqsp2641.scunet_login.ui.Routes
+import com.lfwqsp2641.scunet_login.ui.TabRoutes
 import top.yukonga.miuix.kmp.basic.NavigationBar
 import top.yukonga.miuix.kmp.basic.NavigationBarItem
 import top.yukonga.miuix.kmp.basic.Scaffold
@@ -50,15 +46,30 @@ fun RootScreen() {
 
 @Composable
 fun MainShell(rootNavController: NavController) {
-    var currentTab by remember { mutableStateOf(AppTab.HOME) }
+    val tabBackStack = rememberNavBackStack<TabRoutes>(TabRoutes.Home)
+    val tabNavController = NavController(tabBackStack)
 
     Scaffold(
         bottomBar = {
             NavigationBar {
                 AppTab.entries.forEach { tab ->
+                    val selected = tabBackStack.lastOrNull() == tab.route
                     NavigationBarItem(
-                        selected = currentTab == tab,
-                        onClick = { currentTab = tab },
+                        selected = selected,
+                        onClick = {
+                            if (!selected) {
+                                when (tab.route) {
+                                    TabRoutes.Home -> {
+                                        while (tabBackStack.size > 1) {
+                                            tabBackStack.removeLastOrNull()
+                                        }
+                                    }
+                                    TabRoutes.Log -> {
+                                        tabNavController.push(TabRoutes.Log)
+                                    }
+                                }
+                            }
+                        },
                         icon = ImageVector.vectorResource(tab.icon),
                         label = stringResource(tab.label),
                     )
@@ -66,15 +77,20 @@ fun MainShell(rootNavController: NavController) {
             }
         }
     ) { innerPadding ->
-        Box(
+        NavDisplay(
+            backStack = tabBackStack,
+            onBack = { tabBackStack.removeLastOrNull() },
             modifier = Modifier
                 .fillMaxSize()
                 .padding(bottom = innerPadding.calculateBottomPadding())
                 .background(MiuixTheme.colorScheme.background)
         ) {
-            when (currentTab) {
-                AppTab.HOME -> HomeScreen(Modifier, rootNavController)
-                AppTab.LOG -> LogScreen()
+            entry<TabRoutes.Home> {
+                HomeScreen(Modifier, rootNavController)
+            }
+
+            entry<TabRoutes.Log> {
+                LogScreen()
             }
         }
     }
@@ -82,8 +98,9 @@ fun MainShell(rootNavController: NavController) {
 
 enum class AppTab(
     val label: Int,
-    val icon: Int
+    val icon: Int,
+    val route: TabRoutes
 ) {
-    HOME(R.string.home, R.drawable.ic_home),
-    LOG(R.string.log, R.drawable.ic_description),
+    HOME(R.string.home, R.drawable.ic_home, TabRoutes.Home),
+    LOG(R.string.log, R.drawable.ic_description, TabRoutes.Log),
 }

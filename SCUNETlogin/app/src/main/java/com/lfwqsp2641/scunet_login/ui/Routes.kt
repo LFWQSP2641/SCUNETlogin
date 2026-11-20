@@ -11,3 +11,12 @@ sealed interface Routes : NavKey {
     @Serializable
     data class AccountEditor(val id: String? = null) : Routes
 }
+
+@Serializable
+sealed interface TabRoutes : NavKey {
+    @Serializable
+    data object Home : TabRoutes
+
+    @Serializable
+    data object Log : TabRoutes
+}
