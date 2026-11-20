@@ -9,7 +9,6 @@ import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
 import android.os.Build
-import android.util.Log
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -19,10 +18,11 @@ import com.lfwqsp2641.scunet_login.data.dto.Config
 import com.lfwqsp2641.scunet_login.data.model.TaskLog
 import com.lfwqsp2641.scunet_login.data.utils.configDataStore
 import com.lfwqsp2641.scunet_login.manager.ShizukuManager
+import com.lfwqsp2641.scunet_login.manager.ShizukuPermissionResult
+import com.lfwqsp2641.scunet_login.manager.ShizukuState
 import com.lfwqsp2641.scunet_login.manager.TaskLogging
 import com.lfwqsp2641.scunet_login.service.LoginException
 import com.lfwqsp2641.scunet_login.service.LoginService
-import com.lfwqsp2641.scunet_login.utils.hasShizukuPermission
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -37,17 +37,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
-import rikka.shizuku.Shizuku
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.coroutines.resume
 import kotlin.time.Duration.Companion.milliseconds
 
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
-    companion object {
-        private const val SHIZUKU_PERM = 10001
-        private const val TAG = "HomeViewModel"
-    }
-
     private val dataStore = application.configDataStore
 
     private val _currentSsid = MutableStateFlow<String?>(null)
@@ -59,27 +53,6 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     private val _isAccessLocalNetworkPermissionGrantedFlow = MutableStateFlow(false)
     val isAccessLocalNetworkPermissionGrantedFlow = _isAccessLocalNetworkPermissionGrantedFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
-
-    private val shizukuPermissionListener =
-        Shizuku.OnRequestPermissionResultListener { requestCode, grantResult ->
-            if (requestCode == SHIZUKU_PERM) {
-                if (grantResult == PackageManager.PERMISSION_GRANTED) {
-                    ShizukuManager.init(getApplication())
-                    _isShizukuEnabled.value = true
-                } else {
-                    _isShizukuEnabled.value = false
-                    showToast(R.string.shizuku_permission_denied)
-                }
-            }
-        }
-
-    private val shizukuBinderReceivedListener = Shizuku.OnBinderReceivedListener {
-        fetchShizukuStatus()
-    }
-
-    private val shizukuBinderDeadListener = Shizuku.OnBinderDeadListener {
-        _isShizukuEnabled.value = false
-    }
 
     private val configState: StateFlow<Config> = dataStore.data
         .stateIn(
@@ -109,15 +82,33 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
 
     init {
-        try {
-            Shizuku.addRequestPermissionResultListener(shizukuPermissionListener)
-            Shizuku.addBinderReceivedListener(shizukuBinderReceivedListener)
-            Shizuku.addBinderDeadListener(shizukuBinderDeadListener)
-        } catch (e: Throwable) {
-            Log.e(TAG, "Failed to register Shizuku listeners", e)
+        ShizukuManager.acquire(getApplication())
+        viewModelScope.launch {
+            ShizukuManager.state.collect { state ->
+                _isShizukuEnabled.value =
+                    state == ShizukuState.Ready
+                if (state == ShizukuState.Ready) {
+                    fetchSsid()
+                } else if (state == ShizukuState.Unavailable ||
+                    state == ShizukuState.PermissionRequired
+                ) {
+                    _currentSsid.value =
+                        getApplication<Application>().getString(R.string.network_unavailable)
+                }
+            }
+        }
+        viewModelScope.launch {
+            ShizukuManager.permissionResults.collect { result ->
+                if (result == ShizukuPermissionResult.Denied) {
+                    _toastMessage.emit(
+                        getApplication<Application>().getString(
+                            R.string.shizuku_permission_denied
+                        )
+                    )
+                }
+            }
         }
         fetchSsid()
-        fetchShizukuStatus()
     }
 
 
@@ -183,7 +174,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 return@launch
             }
 
-            val autoManageNetwork = autoManageNetworkChecked && hasShizukuPermission()
+            val autoManageNetwork =
+                autoManageNetworkChecked && ShizukuManager.state.value == ShizukuState.Ready
 
             var targetWifiNetwork: Network? = null
             val appContext = getApplication<Application>()
@@ -352,7 +344,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
                 loginService.startLogout()
                 TaskLogging.addLog("Logout successful", TaskLog.LogLevel.SUCCESS)
 
-                val autoManageNetwork = autoManageNetworkChecked && hasShizukuPermission()
+                val autoManageNetwork =
+                    autoManageNetworkChecked && ShizukuManager.state.value == ShizukuState.Ready
 
                 if (autoManageNetwork) {
                     ShizukuManager.disconnectWifi()
@@ -369,75 +362,40 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun fetchSsid() {
         viewModelScope.launch(Dispatchers.IO) {
-            repeat(5) {
-                val ssid = ShizukuManager.getSsid()
-                _currentSsid.value = ssid
-                if (ssid != null) {
-                    return@launch
-                }
-                kotlinx.coroutines.delay(1000.milliseconds)
+            if (ShizukuManager.state.value !=
+                ShizukuState.Ready
+            ) {
+                _currentSsid.value =
+                    getApplication<Application>().getString(R.string.network_unavailable)
+                return@launch
             }
+
+            _currentSsid.value = null
+            ShizukuManager.getSsid()?.let { _currentSsid.value = it }
         }
     }
 
     fun fetchShizukuStatus() {
         viewModelScope.launch(Dispatchers.IO) {
-            repeat(5) {
-                val isEnabled = hasShizukuPermission()
-                _isShizukuEnabled.value = isEnabled
-                if (isEnabled) {
-                    ShizukuManager.init(getApplication())
-                    return@launch
-                }
-                kotlinx.coroutines.delay(1000.milliseconds)
-            }
+            ShizukuManager.refreshState()
         }
     }
 
     fun requestShizukuPermission() {
         viewModelScope.launch(Dispatchers.IO) {
-            if (hasShizukuPermission()) {
-                ShizukuManager.init(getApplication())
-                _isShizukuEnabled.value = true
-            } else if (Shizuku.pingBinder()) {
-                _isShizukuEnabled.value = false
-                try {
-                    Shizuku.requestPermission(SHIZUKU_PERM)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to request Shizuku permission", e)
-                    _toastMessage.emit(getApplication<Application>().getString(R.string.shizuku_permission_failed))
-                }
-            } else {
-                _isShizukuEnabled.value = false
-                _toastMessage.emit(getApplication<Application>().getString(R.string.shizuku_not_running))
-            }
-        }
-    }
-
-    fun showToast(resId: Int) {
-        viewModelScope.launch {
-            _toastMessage.emit(getApplication<Application>().getString(resId))
+            ShizukuManager.requestPermission()
         }
     }
 
     override fun onCleared() {
-        try {
-            Shizuku.removeRequestPermissionResultListener(shizukuPermissionListener)
-            Shizuku.removeBinderReceivedListener(shizukuBinderReceivedListener)
-            Shizuku.removeBinderDeadListener(shizukuBinderDeadListener)
-        } catch (e: Throwable) {
-            Log.e(TAG, "Failed to remove Shizuku listeners", e)
-        }
-        ShizukuManager.unbind()
+        ShizukuManager.release()
     }
 
     fun checkAccessLocalNetworkPermission() {
         viewModelScope.launch {
-            val granted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN) {
-                ContextCompat.checkSelfPermission(
-                    getApplication(), Manifest.permission.ACCESS_LOCAL_NETWORK
-                ) == PackageManager.PERMISSION_GRANTED
-            } else true
+            val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.CINNAMON_BUN || ContextCompat.checkSelfPermission(
+                getApplication(), Manifest.permission.ACCESS_LOCAL_NETWORK
+            ) == PackageManager.PERMISSION_GRANTED
             _isAccessLocalNetworkPermissionGrantedFlow.value = granted
         }
     }
@@ -448,7 +406,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     fun grantPermissionsByShizuku(permissions: List<String>) {
         viewModelScope.launch {
-            if (!hasShizukuPermission()) {
+            if (ShizukuManager.state.value != ShizukuState.Ready) {
                 return@launch
             }
             for (permission in permissions) {

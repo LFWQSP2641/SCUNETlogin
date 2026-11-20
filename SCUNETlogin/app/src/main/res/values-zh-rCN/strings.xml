@@ -49,4 +49,5 @@
     <string name="permission_denied">权限请求被拒绝</string>
     <string name="current_network">当前网络: %s</string>
     <string name="network_fetching">获取中</string>
+    <string name="network_unavailable">不可用</string>
 </resources>

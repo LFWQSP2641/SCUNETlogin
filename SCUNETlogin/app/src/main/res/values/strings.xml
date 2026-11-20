@@ -48,4 +48,5 @@
     <string name="permission_denied">Permission request denied</string>
     <string name="current_network">Current Network: %s</string>
     <string name="network_fetching">Fetching</string>
+    <string name="network_unavailable">Unavailable</string>
 </resources>
