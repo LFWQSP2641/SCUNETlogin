@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.1 - 2026-11-20
+
+- Refactor Shizuku permission management
+- Fix routing
+
 ## 1.3.0 - 2026-11-03
 
 - Migrate from Material3 to miuix
